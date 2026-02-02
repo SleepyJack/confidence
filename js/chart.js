@@ -48,7 +48,6 @@ const Chart = {
     if (this.chartInstance) {
       this.chartInstance.destroy();
     }
-    this.ctx.setLineDash([]); // Reset dash
 
     // Create new chart
     this.chartInstance = new window.Chart(ctx, {
