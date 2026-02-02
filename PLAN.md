@@ -223,6 +223,216 @@ This modular structure means:
 - Question packs or themed sets
 - Social sharing of scores
 
+## Phase 3: Multi-User Platform with AI Question Generation
+
+### Architecture Overview
+
+**Two-Database System**:
+- **Questions Database**: Stores all questions (static + AI-generated)
+- **Answers Database**: Stores user responses with metadata
+
+### Question Database Schema
+
+```javascript
+{
+  id: "uuid",
+  question: "What is the population of Russia in millions?",
+  answer: 144,
+  unit: "million",
+  category: "demographics",
+  difficulty: "medium",  // estimated or calculated from response data
+
+  // Metadata
+  source: "UN 2023 estimates",  // or "AI-generated"
+  createdAt: timestamp,
+  lastVerified: timestamp,
+  generationModel: "claude-3-opus-20240229",  // if AI-generated
+  swVersion: "1.2.0",  // app version when created
+
+  // Quality metrics (calculated from answers)
+  timesShown: 145,
+  avgCalibrationScore: 67.3,
+  reportCount: 2,  // user reports of incorrect/confusing
+  status: "active",  // active | trial | retired
+
+  // For time-sensitive questions
+  expiresAt: timestamp,  // optional, for "current president" type questions
+  timeSensitive: boolean
+}
+```
+
+### Answer Database Schema
+
+```javascript
+{
+  id: "uuid",
+  userId: "user-uuid",
+  questionId: "question-uuid",
+
+  // Response data
+  userLow: 100,
+  userHigh: 200,
+  confidence: 80,
+  correctAnswer: 144,
+  isCorrect: true,
+
+  // Calculated scores
+  logScore: -3.2,
+  calibrationScore: 68.5,
+
+  // Metadata
+  answeredAt: timestamp,
+  responseTimeMs: 12500,  // time to answer
+  swVersion: "1.2.0"
+}
+```
+
+### Lazy Question Generation Strategy
+
+**Core Principle**: Don't generate questions until needed.
+
+**Algorithm**:
+1. User requests a question
+2. Query for unseen questions:
+   ```sql
+   SELECT * FROM questions
+   WHERE id NOT IN (
+     SELECT question_id FROM answers WHERE user_id = ?
+   )
+   AND status = 'active'
+   ORDER BY RANDOM()
+   LIMIT 1
+   ```
+3. If unseen questions exist (>= threshold, e.g., 10): serve random unseen question
+4. If unseen questions low (< 10): **trigger background generation** of new batch
+5. If no unseen questions: generate on-demand (rare for new users, common for power users)
+
+**Proactive Generation for Power Users**:
+- Monitor unseen question count per user
+- When count drops to 3: spawn background task to generate batch of 20
+- Generation happens async, doesn't block user experience
+- Questions enter "trial" status first
+
+### AI Question Generation
+
+**Generation Flow**:
+1. **Select example questions** (stratified sampling):
+   - Random sample across categories (2 history, 2 science, 2 geography, etc.)
+   - Include mix of difficulties
+   - Prefer questions from last 500 generated (recency) but enforce diversity
+   - Track category distribution to prevent drift
+
+2. **Prompt structure**:
+   ```
+   Generate a numerical estimation question similar to these examples:
+   [5-7 example questions with answers and sources]
+
+   Requirements:
+   - Must have a single numerical answer
+   - Must be verifiable from reliable sources
+   - Provide the source for verification
+   - Vary difficulty and category from examples
+   - Avoid duplicates or very similar questions
+
+   Return: question text, numerical answer, unit, category, source
+   ```
+
+3. **Duplicate prevention**:
+   - **Before generation**: Provide last 50 questions to AI in prompt
+   - **After generation**:
+     - Hash exact question text (catch perfect duplicates)
+     - Semantic similarity check using embeddings (catch near-duplicates)
+     - Threshold: cosine similarity < 0.85
+   - **Human review queue**: Questions with similarity 0.75-0.85 flagged for review
+
+4. **Quality assurance**:
+   - New questions start in "trial" status
+   - After 20 responses: calculate quality metrics
+   - If avgCalibrationScore reasonable & reportCount < 2: promote to "active"
+   - If metrics poor: retire or flag for human review
+
+### Preventing Evolutionary Drift
+
+**Problem**: If we always sample recent questions as examples, categories/styles may drift over time.
+
+**Solutions**:
+1. **Stratified sampling**: Always pull examples from each category
+2. **Anchor questions**: Maintain set of 20 "canonical" questions that are always included in example pool
+3. **Diversity metrics**: Track category/difficulty distribution over time
+   - Alert if new questions skew heavily toward one category
+   - Dashboard showing generation trends
+4. **Periodic human review**: Random sample of AI-generated questions reviewed monthly
+
+### Handling Stale Questions
+
+**Time-sensitive questions** (populations, "current president", records):
+- Flag with `timeSensitive: true` and `expiresAt: timestamp`
+- Cron job checks expired questions monthly
+- Expired questions moved to "needs_review" queue
+- Human reviewer updates answer or retires question
+
+**Quality-based retirement**:
+- If `reportCount > 5` or `avgCalibrationScore < 30`: flag for review
+- Questions with consistently poor metrics retired from active pool
+
+### Cost Control & Rate Limiting
+
+**AI Generation limits**:
+- Max 100 questions generated per hour (global)
+- Max 20 questions per user per day
+- Cache generated questions aggressively
+- Monitor costs with alerts
+
+**Optimization**:
+- Batch generation: Generate 20 at once (1 API call vs 20)
+- Reuse across users: One power user's generation helps all users
+- Fallback: If quota exceeded, serve questions other users haven't seen
+
+### User Reporting & Feedback
+
+**Report types**:
+- "Answer is incorrect"
+- "Question is confusing"
+- "Duplicate question"
+
+**Handling**:
+- Increment `reportCount` on question
+- After 3 reports: auto-flag for human review
+- After 10 reports: auto-retire (extreme cases)
+- Reviewers can edit answer, retire, or mark as "reviewed_ok"
+
+### Question Quality Scoring
+
+Track per-question metrics:
+- **Completion rate**: % of users who answer (vs skip)
+- **Avg calibration score**: Are users well-calibrated on this Q?
+- **Avg confidence**: Do users feel certain or uncertain?
+- **Report rate**: Reports per 100 views
+
+Use metrics to:
+- Identify and retire bad questions
+- Tune difficulty estimates
+- Improve AI generation prompts
+
+### Migration Path from Phase 2
+
+**Phase 2** → **Phase 3**:
+1. Set up databases (Questions, Answers, Users)
+2. Migrate existing static questions to Questions DB
+3. Implement lazy loading (serve from DB instead of JSON file)
+4. Add AI generation endpoint (manual trigger at first)
+5. Implement proactive generation for power users
+6. Add quality scoring and retirement logic
+7. Build admin dashboard for question review
+
+### Open Questions
+
+1. **Which AI model?** Claude (more careful) vs GPT-4 (faster/cheaper)?
+2. **Similarity threshold?** 0.85 too strict? Too lenient?
+3. **Trial period?** 20 responses enough to judge quality?
+4. **Human review cadence?** Weekly? Monthly? Trigger-based only?
+5. **Question expiry?** Auto-expire time-sensitive Qs or manual review?
+
 ## Design Decisions Made ✓
 
 ### Core Mechanics
