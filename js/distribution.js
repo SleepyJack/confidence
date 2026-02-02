@@ -38,6 +38,13 @@ const Distribution = {
   },
 
   /**
+   * Format a number: show up to 2 decimal places, but strip trailing zeros
+   */
+  fmt(n) {
+    return Number.isInteger(n) ? n.toString() : parseFloat(n.toFixed(2)).toString();
+  },
+
+  /**
    * Draw probability distribution visualization with bell curve
    */
   draw(userLow, userHigh, confidence, correctAnswer) {
@@ -91,14 +98,14 @@ const Distribution = {
     this.ctx.textAlign = 'center';
 
     // Min label
-    this.ctx.fillText(displayMin.toFixed(0), padding, height - padding + 15);
+    this.ctx.fillText(this.fmt(displayMin), padding, height - padding + 15);
 
     // Max label
-    this.ctx.fillText(displayMax.toFixed(0), width - padding, height - padding + 15);
+    this.ctx.fillText(this.fmt(displayMax), width - padding, height - padding + 15);
 
     // Mid label
     const midValue = (displayMin + displayMax) / 2;
-    this.ctx.fillText(midValue.toFixed(0), width / 2, height - padding + 15);
+    this.ctx.fillText(this.fmt(midValue), width / 2, height - padding + 15);
 
     // Generate points for the bell curve
     const numPoints = 200;
@@ -207,8 +214,8 @@ const Distribution = {
       yScale(this.normalPDF(userHigh, mean, sigma))
     ) - 14;
 
-    this.ctx.fillText(userLow.toFixed(0), rangeX1, boundsLabelY);
-    this.ctx.fillText(userHigh.toFixed(0), rangeX2, boundsLabelY);
+    this.ctx.fillText(this.fmt(userLow), rangeX1, boundsLabelY);
+    this.ctx.fillText(this.fmt(userHigh), rangeX2, boundsLabelY);
 
     // Label for confidence area
     this.ctx.fillStyle = 'rgba(226, 168, 75, 0.7)';

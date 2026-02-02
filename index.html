@@ -58,10 +58,10 @@
                 <span id="confidence-value" class="confidence-readout">80%</span>
               </div>
               <div class="slider-track-wrapper">
-                <input type="range" id="confidence-slider" min="50" max="99" value="80" step="1">
+                <input type="range" id="confidence-slider" min="1" max="99" value="80" step="1">
               </div>
               <div class="slider-labels">
-                <span>50% &mdash; Coin flip</span>
+                <span>1% &mdash; No idea</span>
                 <span>99% &mdash; Certain</span>
               </div>
             </div>
@@ -105,7 +105,7 @@
             <span class="stats-count" id="stats-total-label">0 answered</span>
           </div>
 
-          <!-- Primary Metric: Calibration Score -->
+          <!-- Primary Metric: Calibration Score + Chart -->
           <div class="primary-metric">
             <div class="metric-label-row">
               <span class="metric-label">Calibration Score</span>
@@ -113,8 +113,11 @@
             </div>
             <div class="metric-value-large" id="stats-score">&mdash;</div>
           </div>
+          <div class="chart-container">
+            <canvas id="chart-canvas"></canvas>
+          </div>
 
-          <!-- Secondary Metric: Calibration Bias -->
+          <!-- Secondary Metric: Calibration Bias + Chart -->
           <div class="secondary-metric">
             <div class="metric-label-row">
               <span class="metric-label">Calibration Bias</span>
@@ -123,10 +126,13 @@
             <div class="metric-value-medium" id="stats-bias">&mdash;</div>
             <div class="metric-hint">Aim for 0%</div>
           </div>
+          <div class="chart-container">
+            <canvas id="bias-chart-canvas"></canvas>
+          </div>
 
           <div class="stats-divider"></div>
 
-          <!-- Tertiary Metrics -->
+          <!-- Summary Metrics -->
           <div class="tertiary-metrics">
             <div class="tertiary-item">
               <span class="tertiary-label">Questions</span>
@@ -140,12 +146,6 @@
               <span class="tertiary-label">Avg Confidence</span>
               <span class="tertiary-value" id="stats-avg-confidence">&mdash;</span>
             </div>
-          </div>
-
-          <!-- Chart -->
-          <div class="chart-container">
-            <div class="chart-label">Score Over Time</div>
-            <canvas id="chart-canvas"></canvas>
           </div>
 
           <button id="reset-btn" class="btn btn-ghost">Reset Progress</button>

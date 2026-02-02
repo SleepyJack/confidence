@@ -220,6 +220,28 @@ const Scoring = {
   },
 
   /**
+   * Get bias data points for time-series chart
+   */
+  getBiasTimeSeriesData(history) {
+    const data = [];
+    let runningHistory = [];
+
+    history.forEach((answer, index) => {
+      runningHistory.push(answer);
+      const bias = this.getCalibrationBias(runningHistory);
+      if (bias !== null) {
+        data.push({
+          questionNumber: index + 1,
+          bias: bias,
+          timestamp: answer.timestamp
+        });
+      }
+    });
+
+    return data;
+  },
+
+  /**
    * Get data points for time-series chart (using Calibration Score)
    */
   getTimeSeriesData(history) {

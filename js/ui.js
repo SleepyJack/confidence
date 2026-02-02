@@ -34,13 +34,14 @@ const UI = {
       statsAccuracy: document.getElementById('stats-accuracy'),
       statsAvgConfidence: document.getElementById('stats-avg-confidence'),
       chartCanvas: document.getElementById('chart-canvas'),
+      biasChartCanvas: document.getElementById('bias-chart-canvas'),
       welcomeModal: document.getElementById('welcome-modal'),
       startBtn: document.getElementById('start-btn'),
       resetBtn: document.getElementById('reset-btn')
     };
 
     this.attachEventListeners();
-    Chart.init(this.elements.chartCanvas);
+    Chart.init(this.elements.chartCanvas, this.elements.biasChartCanvas);
     Distribution.init(this.elements.distributionCanvas);
 
     // Show welcome modal on first visit
@@ -113,8 +114,8 @@ const UI = {
     // Reset inputs
     this.elements.lowInput.value = '';
     this.elements.highInput.value = '';
-    this.elements.confidenceSlider.value = 80;
-    this.elements.confidenceValue.textContent = '80%';
+    this.elements.confidenceSlider.value = 50;
+    this.elements.confidenceValue.textContent = '50%';
 
     // Show question, hide feedback
     this.hideValidation();

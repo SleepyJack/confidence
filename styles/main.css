@@ -627,14 +627,16 @@ input[type="range"]::-moz-range-thumb:hover {
 .primary-metric {
   padding: 20px;
   background: var(--bg-elevated);
-  border-radius: var(--radius-md);
-  margin-bottom: 16px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
   border: 1px solid var(--border);
+  border-bottom: none;
   transition: border-color 0.3s var(--ease);
 }
 
-.primary-metric:hover {
-  border-color: var(--accent-dim);
+.primary-metric + .chart-container {
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  border-top: none;
+  margin-bottom: 16px;
 }
 
 .metric-label-row {
@@ -672,9 +674,15 @@ input[type="range"]::-moz-range-thumb:hover {
 .secondary-metric {
   padding: 16px 20px;
   background: var(--bg-elevated);
-  border-radius: var(--radius-md);
-  margin-bottom: 16px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
   border: 1px solid var(--border);
+  border-bottom: none;
+}
+
+.secondary-metric + .chart-container {
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  border-top: none;
+  margin-bottom: 16px;
 }
 
 .metric-value-medium {
