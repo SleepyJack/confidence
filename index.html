@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confidence Calibration Game</title>
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <h1>Confidence Calibration Game</h1>
+      <p class="subtitle">Test and improve your estimation accuracy</p>
+    </header>
+
+    <!-- Main content area -->
+    <div class="main-content">
+      <!-- Left side: Question/Feedback -->
+      <div class="game-area">
+        <!-- Question Container -->
+        <div id="question-container" class="card">
+          <div class="question-section">
+            <h2 id="question-text">Loading question...</h2>
+          </div>
+
+          <div class="input-section">
+            <div class="input-group">
+              <label for="low-input">Low Bound:</label>
+              <input type="number" id="low-input" placeholder="Enter minimum value" step="any">
+            </div>
+
+            <div class="input-group">
+              <label for="high-input">High Bound:</label>
+              <input type="number" id="high-input" placeholder="Enter maximum value" step="any">
+            </div>
+
+            <div class="input-group slider-group">
+              <label for="confidence-slider">
+                Confidence: <span id="confidence-value">80%</span>
+              </label>
+              <input type="range" id="confidence-slider" min="50" max="99" value="80" step="1">
+              <div class="slider-labels">
+                <span>50%</span>
+                <span>99%</span>
+              </div>
+            </div>
+
+            <button id="submit-btn" class="btn btn-primary">Submit Answer</button>
+          </div>
+        </div>
+
+        <!-- Feedback Container -->
+        <div id="feedback-container" class="card">
+          <div class="feedback-section">
+            <p id="feedback-text" class="feedback-message"></p>
+            <p id="correct-answer" class="correct-answer-text"></p>
+          </div>
+
+          <button id="next-btn" class="btn btn-primary">Next Question</button>
+        </div>
+      </div>
+
+      <!-- Right side: Stats -->
+      <div class="stats-area">
+        <div class="card">
+          <h3>Your Statistics</h3>
+
+          <div class="stats-summary">
+            <div class="stat-item">
+              <span class="stat-label">Questions Answered:</span>
+              <span class="stat-value" id="stats-total">0</span>
+            </div>
+
+            <div class="stat-item">
+              <span class="stat-label">Calibration Score:</span>
+              <span class="stat-value" id="stats-score">-</span>
+            </div>
+
+            <div class="stat-item">
+              <span class="stat-label">Status:</span>
+              <span class="stat-value" id="stats-status">No data yet</span>
+            </div>
+          </div>
+
+          <div class="chart-container">
+            <h4>Progress Over Time</h4>
+            <canvas id="chart-canvas" width="400" height="200"></canvas>
+          </div>
+
+          <div class="calibration-section">
+            <h4>Calibration Breakdown</h4>
+            <div id="calibration-breakdown">
+              <p class="no-data">Answer at least 3 questions to see breakdown</p>
+            </div>
+          </div>
+
+          <button id="reset-btn" class="btn btn-secondary">Reset Progress</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Welcome Modal -->
+  <div id="welcome-modal" class="modal">
+    <div class="modal-content">
+      <h2>Welcome to the Confidence Calibration Game!</h2>
+
+      <div class="instructions">
+        <h3>How to Play:</h3>
+        <ol>
+          <li><strong>Read the question</strong> - You'll be asked to estimate a numerical value</li>
+          <li><strong>Set your range</strong> - Enter a low and high bound that you think contains the correct answer</li>
+          <li><strong>Choose confidence</strong> - Use the slider to indicate your confidence level (50-99%)</li>
+          <li><strong>Submit</strong> - See if you were correct and track your calibration over time</li>
+        </ol>
+
+        <h3>What is Calibration?</h3>
+        <p>
+          Good calibration means your confidence matches your accuracy. For example, if you say you're
+          80% confident, you should be correct about 80% of the time. This game helps you learn if
+          you're overconfident, underconfident, or well-calibrated.
+        </p>
+
+        <h3>Tips:</h3>
+        <ul>
+          <li>Be honest with yourself about what you know and don't know</li>
+          <li>Wider ranges = higher confidence, narrower ranges = lower confidence</li>
+          <li>Track your progress over time to see if you're improving</li>
+        </ul>
+      </div>
+
+      <button id="start-btn" class="btn btn-primary btn-large">Start Playing</button>
+    </div>
+  </div>
+
+  <!-- Load JavaScript modules -->
+  <script src="js/storage.js"></script>
+  <script src="js/scoring.js"></script>
+  <script src="js/chart.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,362 @@
+[
+  {
+    "id": "moon-distance",
+    "question": "What is the average distance from Earth to the Moon in kilometers?",
+    "answer": 384400,
+    "unit": "km",
+    "category": "astronomy",
+    "source": "NASA"
+  },
+  {
+    "id": "everest-height",
+    "question": "What is the height of Mount Everest in meters above sea level?",
+    "answer": 8849,
+    "unit": "m",
+    "category": "geography",
+    "source": "Survey of Nepal 2020"
+  },
+  {
+    "id": "human-bones",
+    "question": "How many bones are in the adult human body?",
+    "answer": 206,
+    "unit": "bones",
+    "category": "biology",
+    "source": "Medical textbooks"
+  },
+  {
+    "id": "speed-of-light",
+    "question": "What is the speed of light in kilometers per second?",
+    "answer": 299792,
+    "unit": "km/s",
+    "category": "physics",
+    "source": "NIST"
+  },
+  {
+    "id": "battle-hastings",
+    "question": "In what year was the Battle of Hastings fought?",
+    "answer": 1066,
+    "unit": "year",
+    "category": "history",
+    "source": "Historical records"
+  },
+  {
+    "id": "earth-circumference",
+    "question": "What is the Earth's circumference at the equator in kilometers?",
+    "answer": 40075,
+    "unit": "km",
+    "category": "geography",
+    "source": "WGS 84"
+  },
+  {
+    "id": "titanic-year",
+    "question": "In what year did the Titanic sink?",
+    "answer": 1912,
+    "unit": "year",
+    "category": "history",
+    "source": "Historical records"
+  },
+  {
+    "id": "eiffel-tower-height",
+    "question": "What is the height of the Eiffel Tower in meters (including antennas)?",
+    "answer": 330,
+    "unit": "m",
+    "category": "architecture",
+    "source": "Official Eiffel Tower website"
+  },
+  {
+    "id": "us-states",
+    "question": "How many states are in the United States of America?",
+    "answer": 50,
+    "unit": "states",
+    "category": "geography",
+    "source": "US Government"
+  },
+  {
+    "id": "tokyo-population",
+    "question": "What is the population of the Tokyo metropolitan area in millions?",
+    "answer": 37,
+    "unit": "million",
+    "category": "demographics",
+    "source": "UN 2023 estimate"
+  },
+  {
+    "id": "days-in-year",
+    "question": "How many days does it take Earth to orbit the Sun?",
+    "answer": 365,
+    "unit": "days",
+    "category": "astronomy",
+    "source": "Astronomical calculations"
+  },
+  {
+    "id": "boiling-water",
+    "question": "At what temperature does water boil at sea level in degrees Celsius?",
+    "answer": 100,
+    "unit": "°C",
+    "category": "chemistry",
+    "source": "Physical chemistry"
+  },
+  {
+    "id": "piano-keys",
+    "question": "How many keys does a standard piano have?",
+    "answer": 88,
+    "unit": "keys",
+    "category": "music",
+    "source": "Piano standards"
+  },
+  {
+    "id": "wwii-end",
+    "question": "In what year did World War II end?",
+    "answer": 1945,
+    "unit": "year",
+    "category": "history",
+    "source": "Historical records"
+  },
+  {
+    "id": "amazon-length",
+    "question": "What is the length of the Amazon River in kilometers?",
+    "answer": 6400,
+    "unit": "km",
+    "category": "geography",
+    "source": "Geographic surveys"
+  },
+  {
+    "id": "sun-distance",
+    "question": "What is the average distance from Earth to the Sun in million kilometers?",
+    "answer": 150,
+    "unit": "million km",
+    "category": "astronomy",
+    "source": "NASA"
+  },
+  {
+    "id": "periodic-elements",
+    "question": "How many elements are in the periodic table (as of 2024)?",
+    "answer": 118,
+    "unit": "elements",
+    "category": "chemistry",
+    "source": "IUPAC"
+  },
+  {
+    "id": "sahara-area",
+    "question": "What is the area of the Sahara Desert in million square kilometers?",
+    "answer": 9,
+    "unit": "million km²",
+    "category": "geography",
+    "source": "Geographic data"
+  },
+  {
+    "id": "mona-lisa-year",
+    "question": "In what year did Leonardo da Vinci begin painting the Mona Lisa?",
+    "answer": 1503,
+    "unit": "year",
+    "category": "art",
+    "source": "Art historians"
+  },
+  {
+    "id": "human-chromosomes",
+    "question": "How many chromosomes do humans have?",
+    "answer": 46,
+    "unit": "chromosomes",
+    "category": "biology",
+    "source": "Genetics textbooks"
+  },
+  {
+    "id": "sound-speed",
+    "question": "What is the speed of sound in air at sea level in meters per second?",
+    "answer": 343,
+    "unit": "m/s",
+    "category": "physics",
+    "source": "Physics textbooks"
+  },
+  {
+    "id": "mars-distance",
+    "question": "What is the minimum distance between Earth and Mars in million kilometers?",
+    "answer": 55,
+    "unit": "million km",
+    "category": "astronomy",
+    "source": "NASA"
+  },
+  {
+    "id": "empire-state-floors",
+    "question": "How many floors does the Empire State Building have?",
+    "answer": 102,
+    "unit": "floors",
+    "category": "architecture",
+    "source": "Building specifications"
+  },
+  {
+    "id": "un-founding",
+    "question": "In what year was the United Nations founded?",
+    "answer": 1945,
+    "unit": "year",
+    "category": "history",
+    "source": "UN official records"
+  },
+  {
+    "id": "great-wall-length",
+    "question": "What is the total length of the Great Wall of China in kilometers?",
+    "answer": 21196,
+    "unit": "km",
+    "category": "architecture",
+    "source": "Chinese archaeological survey 2012"
+  },
+  {
+    "id": "nile-length",
+    "question": "What is the length of the Nile River in kilometers?",
+    "answer": 6650,
+    "unit": "km",
+    "category": "geography",
+    "source": "Geographic surveys"
+  },
+  {
+    "id": "wright-first-flight",
+    "question": "In what year did the Wright Brothers make their first powered flight?",
+    "answer": 1903,
+    "unit": "year",
+    "category": "history",
+    "source": "Historical records"
+  },
+  {
+    "id": "heart-rate",
+    "question": "What is the average resting heart rate for adults in beats per minute?",
+    "answer": 70,
+    "unit": "bpm",
+    "category": "biology",
+    "source": "Medical guidelines"
+  },
+  {
+    "id": "pacific-depth",
+    "question": "What is the deepest point in the ocean (Mariana Trench) in meters?",
+    "answer": 10994,
+    "unit": "m",
+    "category": "geography",
+    "source": "NOAA"
+  },
+  {
+    "id": "apollo-11-year",
+    "question": "In what year did Apollo 11 land on the Moon?",
+    "answer": 1969,
+    "unit": "year",
+    "category": "history",
+    "source": "NASA records"
+  },
+  {
+    "id": "water-freeze",
+    "question": "At what temperature does water freeze in degrees Celsius?",
+    "answer": 0,
+    "unit": "°C",
+    "category": "chemistry",
+    "source": "Physical chemistry"
+  },
+  {
+    "id": "hubble-launch",
+    "question": "In what year was the Hubble Space Telescope launched?",
+    "answer": 1990,
+    "unit": "year",
+    "category": "astronomy",
+    "source": "NASA"
+  },
+  {
+    "id": "russia-population",
+    "question": "What is the population of Russia in millions (2023)?",
+    "answer": 144,
+    "unit": "million",
+    "category": "demographics",
+    "source": "UN estimates"
+  },
+  {
+    "id": "mozart-death",
+    "question": "In what year did Wolfgang Amadeus Mozart die?",
+    "answer": 1791,
+    "unit": "year",
+    "category": "history",
+    "source": "Historical records"
+  },
+  {
+    "id": "light-year-km",
+    "question": "How many trillion kilometers are in one light-year?",
+    "answer": 9,
+    "unit": "trillion km",
+    "category": "astronomy",
+    "source": "Astronomical calculations"
+  },
+  {
+    "id": "statue-liberty-height",
+    "question": "What is the height of the Statue of Liberty from ground to torch in meters?",
+    "answer": 93,
+    "unit": "m",
+    "category": "architecture",
+    "source": "National Park Service"
+  },
+  {
+    "id": "earth-age",
+    "question": "What is the age of Earth in billion years?",
+    "answer": 4.5,
+    "unit": "billion years",
+    "category": "geology",
+    "source": "Scientific consensus"
+  },
+  {
+    "id": "bermuda-triangle-area",
+    "question": "What is the approximate area of the Bermuda Triangle in thousand square kilometers?",
+    "answer": 1500,
+    "unit": "thousand km²",
+    "category": "geography",
+    "source": "Geographic estimates"
+  },
+  {
+    "id": "olympic-rings",
+    "question": "How many rings are in the Olympic symbol?",
+    "answer": 5,
+    "unit": "rings",
+    "category": "sports",
+    "source": "International Olympic Committee"
+  },
+  {
+    "id": "berlin-wall-fall",
+    "question": "In what year did the Berlin Wall fall?",
+    "answer": 1989,
+    "unit": "year",
+    "category": "history",
+    "source": "Historical records"
+  },
+  {
+    "id": "jupiter-moons",
+    "question": "How many confirmed moons does Jupiter have (as of 2023)?",
+    "answer": 95,
+    "unit": "moons",
+    "category": "astronomy",
+    "source": "NASA/IAU"
+  },
+  {
+    "id": "colosseum-capacity",
+    "question": "What was the maximum seating capacity of the Roman Colosseum in thousands?",
+    "answer": 50,
+    "unit": "thousand",
+    "category": "history",
+    "source": "Archaeological estimates"
+  },
+  {
+    "id": "fahrenheit-451",
+    "question": "At what temperature in Fahrenheit does paper ignite (as referenced in Ray Bradbury's novel)?",
+    "answer": 451,
+    "unit": "°F",
+    "category": "science",
+    "source": "Ray Bradbury's research"
+  },
+  {
+    "id": "hawaii-islands",
+    "question": "How many main islands make up the Hawaiian archipelago?",
+    "answer": 8,
+    "unit": "islands",
+    "category": "geography",
+    "source": "Geographic data"
+  },
+  {
+    "id": "gutenberg-bible",
+    "question": "In what year was the Gutenberg Bible first printed?",
+    "answer": 1455,
+    "unit": "year",
+    "category": "history",
+    "source": "Historical records"
+  }
+]
