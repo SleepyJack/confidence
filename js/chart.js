@@ -72,8 +72,8 @@ const Chart = {
     }
 
     // Draw labels
-    this.ctx.fillStyle = '#666';
-    this.ctx.font = '10px sans-serif';
+    this.ctx.fillStyle = '#6b7280';
+    this.ctx.font = '500 10px Inter, sans-serif';
     this.ctx.textAlign = 'right';
 
     // Y-axis labels (100, 80, 60, 40, 20, 0)
@@ -83,9 +83,14 @@ const Chart = {
       this.ctx.fillText(value.toFixed(0) + '%', padding - 5, y + 3);
     }
 
-    // Draw line
-    this.ctx.strokeStyle = '#667eea';
-    this.ctx.lineWidth = 2;
+    // Draw line with gradient
+    const lineGradient = this.ctx.createLinearGradient(padding, 0, width - padding, 0);
+    lineGradient.addColorStop(0, '#6366f1');
+    lineGradient.addColorStop(0.5, '#8b5cf6');
+    lineGradient.addColorStop(1, '#a855f7');
+
+    this.ctx.strokeStyle = lineGradient;
+    this.ctx.lineWidth = 3;
     this.ctx.beginPath();
 
     timeSeriesData.forEach((point, index) => {
@@ -103,22 +108,40 @@ const Chart = {
 
     this.ctx.stroke();
 
-    // Draw points
-    this.ctx.fillStyle = '#667eea';
+    // Draw points with glow
+    this.ctx.shadowColor = 'rgba(99, 102, 241, 0.5)';
+    this.ctx.shadowBlur = 8;
+
     timeSeriesData.forEach((point, index) => {
       const x = timeSeriesData.length > 1
         ? padding + index * xScale
         : width / 2;
       const y = height - padding - (point.score - minScore) * yScale;
 
+      // Gradient for points
+      const pointGradient = this.ctx.createRadialGradient(x, y, 0, x, y, 5);
+      pointGradient.addColorStop(0, '#8b5cf6');
+      pointGradient.addColorStop(1, '#6366f1');
+
+      this.ctx.fillStyle = pointGradient;
       this.ctx.beginPath();
-      this.ctx.arc(x, y, 3, 0, 2 * Math.PI);
+      this.ctx.arc(x, y, 4, 0, 2 * Math.PI);
+      this.ctx.fill();
+
+      // White center
+      this.ctx.fillStyle = '#fff';
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, 2, 0, 2 * Math.PI);
       this.ctx.fill();
     });
 
+    // Reset shadow
+    this.ctx.shadowColor = 'transparent';
+    this.ctx.shadowBlur = 0;
+
     // Draw axis labels
-    this.ctx.fillStyle = '#333';
-    this.ctx.font = '12px sans-serif';
+    this.ctx.fillStyle = '#374151';
+    this.ctx.font = '600 11px Inter, sans-serif';
     this.ctx.textAlign = 'center';
     this.ctx.fillText('Questions Answered', width / 2, height - 5);
 
@@ -134,8 +157,8 @@ const Chart = {
    */
   drawEmpty() {
     this.clear();
-    this.ctx.fillStyle = '#999';
-    this.ctx.font = '14px sans-serif';
+    this.ctx.fillStyle = '#9ca3af';
+    this.ctx.font = '500 13px Inter, sans-serif';
     this.ctx.textAlign = 'center';
     this.ctx.fillText('Answer questions to see your progress',
       this.canvas.width / 2, this.canvas.height / 2);
