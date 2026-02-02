@@ -4,7 +4,7 @@
 
 // Version info - update this with each deployment
 const VERSION = {
-  hash: '73db73a',
+  hash: '1f5d3b7',
   date: '2025-01-XX' // Will show actual build date in production
 };
 
