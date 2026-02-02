@@ -61,14 +61,15 @@ const Scoring = {
 
   /**
    * Normalize log score to 0-100% range (higher is better)
-   * Typical log scores range from -10 (terrible) to -0.1 (excellent)
+   * Typical log scores range from -8 (terrible) to -1 (excellent)
+   * Adjusted based on realistic usage patterns
    */
   normalizeLogScore(logScore) {
-    // Clamp to reasonable range
-    const clamped = Math.max(-10, Math.min(-0.1, logScore));
+    // Clamp to realistic range based on actual usage
+    const clamped = Math.max(-8, Math.min(-1, logScore));
 
-    // Map [-10, -0.1] to [0, 100]
-    const normalized = ((clamped + 10) / 9.9) * 100;
+    // Map [-8, -1] to [0, 100]
+    const normalized = ((clamped + 8) / 7) * 100;
 
     return normalized;
   },

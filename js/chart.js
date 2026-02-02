@@ -45,8 +45,8 @@ const Chart = {
     const yScale = (height - 2 * padding) / (maxScore - minScore);
 
     // Draw axes
-    this.ctx.strokeStyle = '#ddd';
-    this.ctx.lineWidth = 1;
+    this.ctx.strokeStyle = '#d1d5db';
+    this.ctx.lineWidth = 2;
 
     // Y-axis
     this.ctx.beginPath();
@@ -60,16 +60,18 @@ const Chart = {
     this.ctx.lineTo(width - padding, height - padding);
     this.ctx.stroke();
 
-    // Draw grid lines
-    this.ctx.strokeStyle = '#f0f0f0';
-    this.ctx.lineWidth = 0.5;
-    for (let i = 0; i <= 5; i++) {
+    // Draw grid lines (horizontal only, cleaner look)
+    this.ctx.strokeStyle = '#e5e7eb';
+    this.ctx.lineWidth = 1;
+    this.ctx.setLineDash([5, 5]);
+    for (let i = 1; i <= 4; i++) { // Skip top and bottom
       const y = padding + (i * (height - 2 * padding) / 5);
       this.ctx.beginPath();
       this.ctx.moveTo(padding, y);
       this.ctx.lineTo(width - padding, y);
       this.ctx.stroke();
     }
+    this.ctx.setLineDash([]); // Reset dash
 
     // Draw labels
     this.ctx.fillStyle = '#6b7280';
@@ -83,7 +85,38 @@ const Chart = {
       this.ctx.fillText(value.toFixed(0) + '%', padding - 5, y + 3);
     }
 
-    // Draw line with gradient
+    // Draw area fill under line first
+    const areaGradient = this.ctx.createLinearGradient(0, padding, 0, height - padding);
+    areaGradient.addColorStop(0, 'rgba(139, 92, 246, 0.2)');
+    areaGradient.addColorStop(1, 'rgba(139, 92, 246, 0.02)');
+
+    this.ctx.fillStyle = areaGradient;
+    this.ctx.beginPath();
+
+    // Start from bottom left
+    const firstX = timeSeriesData.length > 1 ? padding : width / 2;
+    const firstY = height - padding - (timeSeriesData[0].score - minScore) * yScale;
+    this.ctx.moveTo(firstX, height - padding);
+    this.ctx.lineTo(firstX, firstY);
+
+    // Draw line
+    timeSeriesData.forEach((point, index) => {
+      const x = timeSeriesData.length > 1
+        ? padding + index * xScale
+        : width / 2;
+      const y = height - padding - (point.score - minScore) * yScale;
+      this.ctx.lineTo(x, y);
+    });
+
+    // Close path to bottom right
+    const lastX = timeSeriesData.length > 1
+      ? padding + (timeSeriesData.length - 1) * xScale
+      : width / 2;
+    this.ctx.lineTo(lastX, height - padding);
+    this.ctx.closePath();
+    this.ctx.fill();
+
+    // Now draw the line on top
     const lineGradient = this.ctx.createLinearGradient(padding, 0, width - padding, 0);
     lineGradient.addColorStop(0, '#6366f1');
     lineGradient.addColorStop(0.5, '#8b5cf6');
@@ -91,6 +124,8 @@ const Chart = {
 
     this.ctx.strokeStyle = lineGradient;
     this.ctx.lineWidth = 3;
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
     this.ctx.beginPath();
 
     timeSeriesData.forEach((point, index) => {

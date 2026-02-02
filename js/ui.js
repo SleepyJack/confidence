@@ -22,6 +22,7 @@ const UI = {
       feedbackContainer: document.getElementById('feedback-container'),
       feedbackText: document.getElementById('feedback-text'),
       correctAnswer: document.getElementById('correct-answer'),
+      questionScore: document.getElementById('question-score'),
       distributionCanvas: document.getElementById('distribution-canvas'),
       statsTotal: document.getElementById('stats-total'),
       statsScore: document.getElementById('stats-score'),
@@ -167,6 +168,18 @@ const UI = {
     const q = Game.currentQuestion;
     this.elements.correctAnswer.textContent =
       `The correct answer is: ${q.answer} ${q.unit}`;
+
+    // Calculate and show score for this question
+    const logScore = Scoring.calculateLogScore(
+      this.currentAnswer.userLow,
+      this.currentAnswer.userHigh,
+      this.currentAnswer.confidence,
+      this.currentAnswer.correctAnswer
+    );
+    const normalizedScore = Scoring.normalizeLogScore(logScore);
+
+    this.elements.questionScore.textContent =
+      `This answer scored: ${normalizedScore.toFixed(1)}% (log score: ${logScore.toFixed(2)})`;
 
     // Draw probability distribution visualization
     Distribution.draw(

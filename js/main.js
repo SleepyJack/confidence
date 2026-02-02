@@ -2,6 +2,12 @@
  * Main entry point - initializes the application
  */
 
+// Version info - update this with each deployment
+const VERSION = {
+  hash: 'ed79781',
+  date: '2025-01-XX' // Will show actual build date in production
+};
+
 async function initApp() {
   try {
     // Initialize game
@@ -10,7 +16,13 @@ async function initApp() {
     // Initialize UI
     UI.init();
 
-    console.log('Confidence Calibration Game initialized successfully');
+    // Update version display
+    const versionEl = document.getElementById('version-info');
+    if (versionEl) {
+      versionEl.textContent = `v${VERSION.hash}`;
+    }
+
+    console.log('Confidence Calibration Game initialized successfully', VERSION);
   } catch (error) {
     console.error('Failed to initialize app:', error);
     alert('Failed to load the game. Please refresh the page.');
