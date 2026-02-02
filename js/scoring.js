@@ -90,17 +90,22 @@ const Scoring = {
 
   /**
    * Calculate average log score across all answers
+   * Individual scores are clamped to LOG_SCORE_FLOOR to prevent
+   * a single extreme outlier from dominating the average.
    */
+  LOG_SCORE_FLOOR: -12,
+
   getAverageLogScore(history) {
     if (history.length === 0) return null;
 
     const totalLogScore = history.reduce((sum, answer) => {
-      return sum + this.calculateLogScore(
+      const raw = this.calculateLogScore(
         answer.userLow,
         answer.userHigh,
         answer.confidence,
         answer.correctAnswer
       );
+      return sum + Math.max(raw, this.LOG_SCORE_FLOOR);
     }, 0);
 
     return totalLogScore / history.length;
@@ -108,15 +113,14 @@ const Scoring = {
 
   /**
    * Normalize log score to 0-100% range (higher is better)
-   * Typical log scores range from -8 (terrible) to -1 (excellent)
-   * Adjusted based on realistic usage patterns
+   * Uses range [LOG_SCORE_FLOOR, -1] mapped to [0, 100]
    */
   normalizeLogScore(logScore) {
-    // Clamp to realistic range based on actual usage
-    const clamped = Math.max(-8, Math.min(-1, logScore));
+    const floor = this.LOG_SCORE_FLOOR;
+    const clamped = Math.max(floor, Math.min(-1, logScore));
 
-    // Map [-8, -1] to [0, 100]
-    const normalized = ((clamped + 8) / 7) * 100;
+    // Map [floor, -1] to [0, 100]
+    const normalized = ((clamped - floor) / (-1 - floor)) * 100;
 
     return normalized;
   },

@@ -73,8 +73,8 @@ const Chart = {
         }]
       },
       options: {
-        responsive: false,
-        maintainAspectRatio: false,
+        responsive: true,
+        maintainAspectRatio: true,
         plugins: {
           legend: {
             display: false
@@ -180,11 +180,12 @@ const Chart = {
 
     // Draw empty state message
     const ctx = this.canvas.getContext('2d');
+    const w = this.canvas.clientWidth || this.canvas.width;
+    const h = this.canvas.clientHeight || this.canvas.height;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     ctx.fillStyle = '#5c5955';
     ctx.font = '500 12px JetBrains Mono, monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('Answer questions to see your progress',
-      this.canvas.width / 2, this.canvas.height / 2);
+    ctx.fillText('Answer questions to see your progress', w / 2, h / 2);
   }
 };

@@ -16,6 +16,19 @@ const Distribution = {
   },
 
   /**
+   * Resize canvas buffer to match display size for sharp rendering
+   */
+  resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = this.canvas.getBoundingClientRect();
+    this.canvas.width = rect.width * dpr;
+    this.canvas.height = rect.height * dpr;
+    this.ctx.scale(dpr, dpr);
+    // Return CSS dimensions for drawing calculations
+    return { width: rect.width, height: rect.height };
+  },
+
+  /**
    * Calculate normal distribution PDF at x
    */
   normalPDF(x, mean, sigma) {
@@ -30,10 +43,9 @@ const Distribution = {
   draw(userLow, userHigh, confidence, correctAnswer) {
     if (!this.ctx) return;
 
-    this.clear();
-
-    const width = this.canvas.width;
-    const height = this.canvas.height;
+    const dims = this.resizeCanvas();
+    const width = dims.width;
+    const height = dims.height;
     const padding = 40;
 
     // Calculate normal distribution parameters
@@ -278,6 +290,7 @@ const Distribution = {
    * Clear canvas
    */
   clear() {
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 };
