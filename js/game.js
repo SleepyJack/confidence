@@ -88,14 +88,11 @@ const Game = {
    */
   getGameState() {
     const history = Storage.loadHistory();
-    const calibration = Scoring.calculateOverallCalibration(history);
-    const status = Scoring.getCalibrationStatus(calibration);
+    const metrics = Scoring.calculateAllMetrics(history);
 
     return {
       history: history,
-      calibration: calibration,
-      status: status,
-      totalAnswered: history.length,
+      metrics: metrics,
       questionsRemaining: this.questions.length - this.seenQuestions.length
     };
   },

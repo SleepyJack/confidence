@@ -18,7 +18,7 @@ const Chart = {
    * Draw time-series chart
    */
   draw(history) {
-    if (!this.ctx || history.length < 3) {
+    if (!this.ctx || history.length < 1) {
       this.drawEmpty();
       return;
     }
@@ -35,11 +35,13 @@ const Chart = {
     const height = this.canvas.height;
     const padding = 30;
 
-    // Calculate scales
-    const maxScore = Math.max(...timeSeriesData.map(d => d.score), 50);
+    // Fixed scale for Calibration Score (0-100%)
+    const maxScore = 100;
     const minScore = 0;
 
-    const xScale = (width - 2 * padding) / (timeSeriesData.length - 1);
+    const xScale = timeSeriesData.length > 1
+      ? (width - 2 * padding) / (timeSeriesData.length - 1)
+      : 0;
     const yScale = (height - 2 * padding) / (maxScore - minScore);
 
     // Draw axes
@@ -74,20 +76,22 @@ const Chart = {
     this.ctx.font = '10px sans-serif';
     this.ctx.textAlign = 'right';
 
-    // Y-axis labels
+    // Y-axis labels (100, 80, 60, 40, 20, 0)
     for (let i = 0; i <= 5; i++) {
       const value = maxScore - (i * maxScore / 5);
       const y = padding + (i * (height - 2 * padding) / 5);
-      this.ctx.fillText(value.toFixed(0), padding - 5, y + 3);
+      this.ctx.fillText(value.toFixed(0) + '%', padding - 5, y + 3);
     }
 
     // Draw line
-    this.ctx.strokeStyle = '#4CAF50';
+    this.ctx.strokeStyle = '#667eea';
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
 
     timeSeriesData.forEach((point, index) => {
-      const x = padding + index * xScale;
+      const x = timeSeriesData.length > 1
+        ? padding + index * xScale
+        : width / 2;
       const y = height - padding - (point.score - minScore) * yScale;
 
       if (index === 0) {
@@ -100,9 +104,11 @@ const Chart = {
     this.ctx.stroke();
 
     // Draw points
-    this.ctx.fillStyle = '#4CAF50';
+    this.ctx.fillStyle = '#667eea';
     timeSeriesData.forEach((point, index) => {
-      const x = padding + index * xScale;
+      const x = timeSeriesData.length > 1
+        ? padding + index * xScale
+        : width / 2;
       const y = height - padding - (point.score - minScore) * yScale;
 
       this.ctx.beginPath();
@@ -119,7 +125,7 @@ const Chart = {
     this.ctx.save();
     this.ctx.translate(12, height / 2);
     this.ctx.rotate(-Math.PI / 2);
-    this.ctx.fillText('Calibration Error', 0, 0);
+    this.ctx.fillText('Calibration Score (%)', 0, 0);
     this.ctx.restore();
   },
 
@@ -131,7 +137,7 @@ const Chart = {
     this.ctx.fillStyle = '#999';
     this.ctx.font = '14px sans-serif';
     this.ctx.textAlign = 'center';
-    this.ctx.fillText('Answer more questions to see your progress',
+    this.ctx.fillText('Answer questions to see your progress',
       this.canvas.width / 2, this.canvas.height / 2);
   },
 

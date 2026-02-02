@@ -1,5 +1,5 @@
 /**
- * Scoring module - calculates calibration metrics
+ * Scoring module - calculates calibration metrics using Brier score
  */
 
 const Scoring = {
@@ -11,108 +11,124 @@ const Scoring = {
   },
 
   /**
-   * Round confidence to nearest bucket (5% increments)
+   * Calculate Brier score for a single answer
+   * Returns a value between 0 (perfect) and 1 (worst)
    */
-  roundConfidence(confidence) {
-    return Math.round(confidence / 5) * 5;
+  calculateBrierScore(confidence, isCorrect) {
+    const confidenceDecimal = confidence / 100;
+    const outcome = isCorrect ? 1 : 0;
+    return Math.pow(confidenceDecimal - outcome, 2);
   },
 
   /**
-   * Calculate calibration by confidence level
+   * Calculate average Brier score across all answers
    */
-  getCalibrationByConfidenceLevel(history) {
-    const buckets = {};
-
-    history.forEach(answer => {
-      const bucket = this.roundConfidence(answer.confidence);
-      if (!buckets[bucket]) {
-        buckets[bucket] = { correct: 0, total: 0 };
-      }
-      buckets[bucket].total++;
-      if (answer.isCorrect) {
-        buckets[bucket].correct++;
-      }
-    });
-
-    // Convert to array with calibration error
-    const result = [];
-    for (const [confidence, data] of Object.entries(buckets)) {
-      const expectedAccuracy = parseFloat(confidence);
-      const actualAccuracy = (data.correct / data.total) * 100;
-      const calibrationError = Math.abs(expectedAccuracy - actualAccuracy);
-
-      result.push({
-        confidence: parseFloat(confidence),
-        expected: expectedAccuracy,
-        actual: actualAccuracy,
-        correct: data.correct,
-        total: data.total,
-        error: calibrationError
-      });
-    }
-
-    return result.sort((a, b) => a.confidence - b.confidence);
-  },
-
-  /**
-   * Calculate overall calibration score
-   */
-  calculateOverallCalibration(history) {
+  getAverageBrierScore(history) {
     if (history.length === 0) return null;
 
-    const byLevel = this.getCalibrationByConfidenceLevel(history);
+    const totalBrier = history.reduce((sum, answer) => {
+      return sum + this.calculateBrierScore(answer.confidence, answer.isCorrect);
+    }, 0);
 
-    // Weighted average of calibration errors
-    let totalError = 0;
-    let totalWeight = 0;
+    return totalBrier / history.length;
+  },
 
-    byLevel.forEach(level => {
-      totalError += level.error * level.total;
-      totalWeight += level.total;
-    });
+  /**
+   * Calculate Calibration Score (0-100%, higher is better)
+   * This is (1 - Brier) * 100
+   */
+  getCalibrationScore(history) {
+    const brierScore = this.getAverageBrierScore(history);
+    if (brierScore === null) return null;
+
+    return (1 - brierScore) * 100;
+  },
+
+  /**
+   * Calculate actual accuracy (% correct)
+   */
+  getActualAccuracy(history) {
+    if (history.length === 0) return null;
+
+    const correct = history.filter(answer => answer.isCorrect).length;
+    return (correct / history.length) * 100;
+  },
+
+  /**
+   * Calculate average confidence across all answers
+   */
+  getAverageConfidence(history) {
+    if (history.length === 0) return null;
+
+    const totalConfidence = history.reduce((sum, answer) => sum + answer.confidence, 0);
+    return totalConfidence / history.length;
+  },
+
+  /**
+   * Calculate calibration bias
+   * Positive = overconfident, Negative = underconfident
+   * Range: -100 to +100
+   */
+  getCalibrationBias(history) {
+    const avgConfidence = this.getAverageConfidence(history);
+    const actualAccuracy = this.getActualAccuracy(history);
+
+    if (avgConfidence === null || actualAccuracy === null) return null;
+
+    return avgConfidence - actualAccuracy;
+  },
+
+  /**
+   * Determine calibration status based on bias
+   */
+  getCalibrationStatus(bias) {
+    if (bias === null) return 'No data yet';
+
+    const absBias = Math.abs(bias);
+
+    if (absBias < 5) return 'Well-calibrated';
+    if (bias > 5) return 'Overconfident';
+    if (bias < -5) return 'Underconfident';
+
+    return 'Well-calibrated';
+  },
+
+  /**
+   * Calculate all metrics at once
+   */
+  calculateAllMetrics(history) {
+    if (history.length === 0) {
+      return {
+        calibrationScore: null,
+        brierScore: null,
+        calibrationBias: null,
+        actualAccuracy: null,
+        averageConfidence: null,
+        status: 'No data yet',
+        totalAnswered: 0
+      };
+    }
+
+    const brierScore = this.getAverageBrierScore(history);
+    const calibrationScore = this.getCalibrationScore(history);
+    const calibrationBias = this.getCalibrationBias(history);
+    const actualAccuracy = this.getActualAccuracy(history);
+    const averageConfidence = this.getAverageConfidence(history);
+    const status = this.getCalibrationStatus(calibrationBias);
 
     return {
-      score: totalWeight > 0 ? totalError / totalWeight : 0,
-      byLevel: byLevel,
+      calibrationScore: calibrationScore,
+      brierScore: brierScore,
+      calibrationBias: calibrationBias,
+      actualAccuracy: actualAccuracy,
+      averageConfidence: averageConfidence,
+      status: status,
       totalAnswered: history.length
     };
   },
 
   /**
-   * Get recent calibration (last N answers or time-weighted)
-   */
-  getRecentCalibration(history, windowSize = 20) {
-    if (history.length === 0) return null;
-
-    const recent = history.slice(-windowSize);
-    return this.calculateOverallCalibration(recent);
-  },
-
-  /**
-   * Determine if user is over/under/well-calibrated
-   */
-  getCalibrationStatus(calibration) {
-    if (!calibration) return 'No data yet';
-
-    const score = calibration.score;
-
-    if (score < 10) return 'Well-calibrated';
-
-    // Check if generally over or under confident
-    let totalBias = 0;
-    calibration.byLevel.forEach(level => {
-      totalBias += (level.expected - level.actual);
-    });
-
-    const avgBias = totalBias / calibration.byLevel.length;
-
-    if (avgBias > 5) return 'Overconfident';
-    if (avgBias < -5) return 'Underconfident';
-    return 'Moderately calibrated';
-  },
-
-  /**
-   * Get data points for time-series chart
+   * Get data points for time-series chart (using Calibration Score)
    */
   getTimeSeriesData(history) {
     const data = [];
@@ -121,12 +137,12 @@ const Scoring = {
     history.forEach((answer, index) => {
       runningHistory.push(answer);
 
-      // Calculate calibration at this point
-      if (runningHistory.length >= 3) { // Need at least 3 answers
-        const calibration = this.calculateOverallCalibration(runningHistory);
+      // Calculate calibration score at this point
+      if (runningHistory.length >= 1) {
+        const calibrationScore = this.getCalibrationScore(runningHistory);
         data.push({
           questionNumber: index + 1,
-          score: calibration.score,
+          score: calibrationScore,
           timestamp: answer.timestamp
         });
       }

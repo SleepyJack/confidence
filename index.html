@@ -66,33 +66,51 @@
         <div class="card">
           <h3>Your Statistics</h3>
 
-          <div class="stats-summary">
-            <div class="stat-item">
-              <span class="stat-label">Questions Answered:</span>
-              <span class="stat-value" id="stats-total">0</span>
-            </div>
-
-            <div class="stat-item">
-              <span class="stat-label">Calibration Score:</span>
-              <span class="stat-value" id="stats-score">-</span>
-            </div>
-
-            <div class="stat-item">
-              <span class="stat-label">Status:</span>
-              <span class="stat-value" id="stats-status">No data yet</span>
+          <!-- Primary Metric: Calibration Score -->
+          <div class="primary-metric">
+            <div class="metric-icon">🎯</div>
+            <div class="metric-content">
+              <div class="metric-label">Calibration Score</div>
+              <div class="metric-value" id="stats-score">-</div>
+              <div class="metric-hint">Higher is better</div>
             </div>
           </div>
 
+          <!-- Secondary Metric: Calibration Bias -->
+          <div class="secondary-metric">
+            <div class="metric-icon">📊</div>
+            <div class="metric-content">
+              <div class="metric-label">Calibration Bias</div>
+              <div class="metric-row">
+                <span class="metric-value" id="stats-bias">-</span>
+                <span class="metric-status" id="stats-status">No data yet</span>
+              </div>
+              <div class="metric-hint">Aim for 0%</div>
+            </div>
+          </div>
+
+          <div class="stats-divider"></div>
+
+          <!-- Tertiary Metrics -->
+          <div class="tertiary-metrics">
+            <div class="tertiary-item">
+              <span class="tertiary-label">Questions:</span>
+              <span class="tertiary-value" id="stats-total">0</span>
+            </div>
+            <div class="tertiary-item">
+              <span class="tertiary-label">Accuracy:</span>
+              <span class="tertiary-value" id="stats-accuracy">-</span>
+            </div>
+            <div class="tertiary-item">
+              <span class="tertiary-label">Avg Confidence:</span>
+              <span class="tertiary-value" id="stats-avg-confidence">-</span>
+            </div>
+          </div>
+
+          <!-- Chart -->
           <div class="chart-container">
             <h4>Progress Over Time</h4>
             <canvas id="chart-canvas" width="400" height="200"></canvas>
-          </div>
-
-          <div class="calibration-section">
-            <h4>Calibration Breakdown</h4>
-            <div id="calibration-breakdown">
-              <p class="no-data">Answer at least 3 questions to see breakdown</p>
-            </div>
           </div>
 
           <button id="reset-btn" class="btn btn-secondary">Reset Progress</button>

@@ -24,8 +24,10 @@ const UI = {
       correctAnswer: document.getElementById('correct-answer'),
       statsTotal: document.getElementById('stats-total'),
       statsScore: document.getElementById('stats-score'),
+      statsBias: document.getElementById('stats-bias'),
       statsStatus: document.getElementById('stats-status'),
-      calibrationBreakdown: document.getElementById('calibration-breakdown'),
+      statsAccuracy: document.getElementById('stats-accuracy'),
+      statsAvgConfidence: document.getElementById('stats-avg-confidence'),
       chartCanvas: document.getElementById('chart-canvas'),
       welcomeModal: document.getElementById('welcome-modal'),
       startBtn: document.getElementById('start-btn'),
@@ -180,64 +182,52 @@ const UI = {
    */
   updateStats() {
     const state = Game.getGameState();
+    const m = state.metrics;
 
     // Total questions
-    this.elements.statsTotal.textContent = state.totalAnswered;
+    this.elements.statsTotal.textContent = m.totalAnswered;
 
-    // Calibration score
-    if (state.calibration) {
-      this.elements.statsScore.textContent = state.calibration.score.toFixed(1);
-      this.elements.statsStatus.textContent = state.status;
+    // Display metrics
+    if (m.calibrationScore !== null) {
+      // Calibration Score (headline metric)
+      this.elements.statsScore.textContent = m.calibrationScore.toFixed(1) + '%';
 
-      // Status color
-      if (state.status.includes('Well')) {
+      // Calibration Bias (over/under confident)
+      const biasSign = m.calibrationBias >= 0 ? '+' : '';
+      this.elements.statsBias.textContent = biasSign + m.calibrationBias.toFixed(1) + '%';
+
+      // Status (based on bias)
+      this.elements.statsStatus.textContent = m.status;
+
+      // Status color based on bias
+      const absBias = Math.abs(m.calibrationBias);
+      if (absBias < 5) {
         this.elements.statsStatus.className = 'status-good';
-      } else if (state.status.includes('Over')) {
-        this.elements.statsStatus.className = 'status-warning';
+        this.elements.statsBias.className = 'bias-good';
+      } else if (m.calibrationBias > 0) {
+        this.elements.statsStatus.className = 'status-overconfident';
+        this.elements.statsBias.className = 'bias-overconfident';
       } else {
-        this.elements.statsStatus.className = 'status-warning';
+        this.elements.statsStatus.className = 'status-underconfident';
+        this.elements.statsBias.className = 'bias-underconfident';
       }
 
-      // Breakdown by confidence level
-      this.renderCalibrationBreakdown(state.calibration.byLevel);
+      // Secondary metrics (accuracy and avg confidence)
+      this.elements.statsAccuracy.textContent = m.actualAccuracy.toFixed(0) + '%';
+      this.elements.statsAvgConfidence.textContent = m.averageConfidence.toFixed(0) + '%';
 
       // Update chart
       Chart.draw(state.history);
     } else {
       this.elements.statsScore.textContent = '-';
+      this.elements.statsBias.textContent = '-';
       this.elements.statsStatus.textContent = 'No data yet';
       this.elements.statsStatus.className = '';
-      this.elements.calibrationBreakdown.innerHTML = '<p class="no-data">Answer at least 3 questions to see calibration breakdown</p>';
+      this.elements.statsBias.className = '';
+      this.elements.statsAccuracy.textContent = '-';
+      this.elements.statsAvgConfidence.textContent = '-';
       Chart.drawEmpty();
     }
-  },
-
-  /**
-   * Render calibration breakdown table
-   */
-  renderCalibrationBreakdown(byLevel) {
-    if (!byLevel || byLevel.length === 0) {
-      this.elements.calibrationBreakdown.innerHTML = '<p class="no-data">Not enough data</p>';
-      return;
-    }
-
-    let html = '<table class="breakdown-table"><thead><tr>';
-    html += '<th>Confidence</th><th>Correct</th><th>Total</th><th>Actual</th><th>Error</th>';
-    html += '</tr></thead><tbody>';
-
-    byLevel.forEach(level => {
-      const errorClass = level.error < 10 ? 'good' : level.error < 20 ? 'ok' : 'bad';
-      html += '<tr>';
-      html += `<td>${level.confidence}%</td>`;
-      html += `<td>${level.correct}</td>`;
-      html += `<td>${level.total}</td>`;
-      html += `<td>${level.actual.toFixed(0)}%</td>`;
-      html += `<td class="${errorClass}">${level.error.toFixed(1)}</td>`;
-      html += '</tr>';
-    });
-
-    html += '</tbody></table>';
-    this.elements.calibrationBreakdown.innerHTML = html;
   },
 
   /**

@@ -270,42 +270,145 @@ input[type="range"]::-moz-range-thumb:hover {
   color: #555;
 }
 
-.stats-summary {
+/* Primary Metric (Calibration Score) */
+.primary-metric {
   display: flex;
-  flex-direction: column;
-  gap: 15px;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 2px solid #f0f0f0;
-}
-
-.stat-item {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 15px;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  margin-bottom: 20px;
+  color: white;
 }
 
-.stat-label {
-  font-weight: 600;
-  color: #666;
+.primary-metric .metric-icon {
+  font-size: 2.5rem;
 }
 
-.stat-value {
-  font-size: 1.3rem;
+.primary-metric .metric-content {
+  flex: 1;
+}
+
+.primary-metric .metric-label {
+  font-size: 0.95rem;
+  opacity: 0.9;
+  margin-bottom: 5px;
+}
+
+.primary-metric .metric-value {
+  font-size: 2.5rem;
   font-weight: 700;
-  color: #667eea;
+  line-height: 1;
+  margin-bottom: 5px;
 }
 
-#stats-status {
-  font-size: 1.1rem;
+.primary-metric .metric-hint {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+/* Secondary Metric (Calibration Bias) */
+.secondary-metric {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.secondary-metric .metric-icon {
+  font-size: 2rem;
+}
+
+.secondary-metric .metric-content {
+  flex: 1;
+}
+
+.secondary-metric .metric-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.secondary-metric .metric-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.secondary-metric .metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.secondary-metric .metric-status {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.secondary-metric .metric-hint {
+  font-size: 0.85rem;
+  color: #999;
+}
+
+/* Bias color classes */
+.bias-good {
+  color: #28a745;
+}
+
+.bias-overconfident {
+  color: #dc3545;
+}
+
+.bias-underconfident {
+  color: #3498db;
 }
 
 .status-good {
   color: #28a745 !important;
 }
 
-.status-warning {
-  color: #ffc107 !important;
+.status-overconfident {
+  color: #dc3545 !important;
+}
+
+.status-underconfident {
+  color: #3498db !important;
+}
+
+/* Stats divider */
+.stats-divider {
+  height: 2px;
+  background: #e0e0e0;
+  margin: 20px 0;
+}
+
+/* Tertiary Metrics */
+.tertiary-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 25px;
+}
+
+.tertiary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.tertiary-label {
+  color: #666;
+}
+
+.tertiary-value {
+  font-weight: 600;
+  color: #333;
 }
 
 /* Chart */
@@ -321,56 +424,6 @@ input[type="range"]::-moz-range-thumb:hover {
   margin-top: 10px;
 }
 
-/* Calibration breakdown */
-.calibration-section {
-  margin-bottom: 20px;
-}
-
-.breakdown-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-  font-size: 0.9rem;
-}
-
-.breakdown-table th,
-.breakdown-table td {
-  padding: 10px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.breakdown-table th {
-  background: #f8f9fa;
-  font-weight: 600;
-  color: #555;
-}
-
-.breakdown-table td {
-  color: #666;
-}
-
-.breakdown-table td.good {
-  color: #28a745;
-  font-weight: 600;
-}
-
-.breakdown-table td.ok {
-  color: #ffc107;
-  font-weight: 600;
-}
-
-.breakdown-table td.bad {
-  color: #dc3545;
-  font-weight: 600;
-}
-
-.no-data {
-  color: #999;
-  font-style: italic;
-  text-align: center;
-  padding: 20px;
-}
 
 /* Modal */
 .modal {
