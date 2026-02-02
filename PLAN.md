@@ -17,9 +17,11 @@ Building a confidence calibration game as a web application, starting with a min
 ### Technical Architecture
 
 **Frontend Only (No Backend Required for MVP)**
-- HTML/CSS/JavaScript
-- Option A: Vanilla JS (simplest, fastest to build)
-- Option B: Lightweight framework (React/Vue if we want component structure)
+- HTML/CSS/JavaScript (Vanilla JS for MVP)
+- **Modular structure** to enable easy migration to React/Vue later:
+  - Separate modules: `game.js` (game logic), `storage.js` (localStorage), `ui.js` (DOM manipulation), `scoring.js` (calibration calculations)
+  - Clear interfaces between modules
+  - No tight coupling to DOM structure
 
 **Data Storage**
 - Questions: Static JSON file embedded in the project
@@ -41,39 +43,133 @@ Building a confidence calibration game as a web application, starting with a min
 ### Scoring Algorithm
 
 **Calibration Calculation**:
-For each confidence level (e.g., 80%), calculate:
-- Expected accuracy: 80%
-- Actual accuracy: (correct answers / total answers at this confidence level) × 100%
+For each answer, determine if the correct answer falls within the user's stated range:
+- If correct answer is within [userLow, userHigh]: **correct**
+- If outside the range: **incorrect**
+
+**Instantaneous Calibration Score**:
+After each question, calculate running metrics:
+- Bucket answers by confidence level (rounded to nearest 5% or 10%)
+- For each bucket: Expected accuracy vs Actual accuracy
 - Calibration error: |Expected - Actual|
+- Overall calibration score: weighted average of calibration errors
 
-**Overall Score**:
-- Average calibration error across all confidence levels used
-- Lower is better (perfect calibration = 0)
+**Time-Series & Recency Weighting**:
+- Store all historical answers with timestamps
+- Display calibration score over time (e.g., line chart or sparkline)
+- **Recency weighting** (optional for MVP, consider for polish):
+  - Recent answers weighted more heavily in score calculation
+  - Simple approach: Exponential moving average with decay factor (e.g., 0.9)
+  - Alternative: Rolling window (e.g., last 20 answers)
+- Shows if user is improving calibration over time
 
-**Display**:
-- Per-confidence-level breakdown
-- Overall calibration score
-- Simple indicator: "Overconfident" vs "Well-calibrated" vs "Underconfident"
+**Display Components**:
+1. **Current Answer Feedback**: "Correct!" or "Incorrect - answer was X"
+2. **Instantaneous Score**: Current overall calibration score
+3. **Mini Chart**: Small time-series showing score trend
+4. **Summary Stats**:
+   - Total questions answered
+   - Per-confidence-level breakdown (e.g., "At 80% confidence: 12/15 correct = 80%" - perfect!)
+   - Overall indicator: "Overconfident" / "Well-calibrated" / "Underconfident"
 
 ### UI/UX Design Decisions
 
 **Question Input**:
-- Text inputs for low/high bounds (most flexible)
-- Consider adding number validation and range helpers
-- Dropdown or buttons for confidence (e.g., 50%, 70%, 80%, 90%, 95%, 99%)
+- Text inputs for low/high bounds (with number validation)
+- **Slider for confidence level** (0-100%, or perhaps 50-99% to avoid extremes)
+  - Shows percentage as user drags
+  - Allows sophisticated users full control over confidence expression
 
-**Game Flow**:
-1. Welcome screen with instructions
-2. Question display (1 at a time)
-3. User input form
-4. Immediate feedback (correct answer + whether user was right)
-5. Continue to next question
-6. After N questions (10-20?), show summary statistics
+**Game Flow (One Question at a Time)**:
+1. **First visit**: Brief instructions overlay or welcome modal
+2. **Question Display**: Show one question with input form
+3. **User Input**: Range (low/high) + confidence slider
+4. **Submit Answer**
+5. **Immediate Feedback Screen**:
+   - Reveal correct answer
+   - Show if user's range captured it (✓ or ✗)
+   - Update and display calibration stats:
+     - Current overall calibration score
+     - Mini time-series chart showing trend
+     - Summary stats (total Qs, breakdown by confidence level)
+6. **"Next Question" button**: User decides whether to continue or stop
+7. **No enforced session length**: Users play as long as they want
 
-**Feedback Loop**:
-- Show correct answer immediately after each question
-- Highlight if user's range contained the answer
-- At end of session, show calibration table and overall score
+**Persistent Stats Display**:
+- Always visible (sidebar or top bar):
+  - Total questions answered
+  - Current calibration score
+  - Mini chart showing recent performance
+- Updates after each question
+
+**Future Enhancement (Post-MVP)**:
+- **History View**: Separate page/modal where users can browse all past answers, filter by category, see which questions they got wrong, etc.
+
+## Technical Implementation Structure
+
+### File Organization
+```
+confidence/
+├── index.html           # Main HTML page
+├── styles/
+│   └── main.css        # All styles
+├── js/
+│   ├── main.js         # Entry point, initialization
+│   ├── game.js         # Game state and logic
+│   ├── storage.js      # localStorage interface
+│   ├── scoring.js      # Calibration calculations
+│   ├── ui.js           # DOM manipulation, rendering
+│   └── chart.js        # Time-series visualization
+└── data/
+    └── questions.json  # Static question bank
+```
+
+### Module Interfaces
+
+**game.js** - Core game logic
+```javascript
+// State management
+- getCurrentQuestion()
+- submitAnswer(low, high, confidence)
+- getNextQuestion()
+- getGameState()
+```
+
+**storage.js** - Data persistence
+```javascript
+- saveAnswer(answer)
+- loadHistory()
+- getQuestionPool()
+- markQuestionSeen(questionId)
+```
+
+**scoring.js** - Calibration calculations
+```javascript
+- calculateCalibration(history)
+- getCalibrationByConfidenceLevel(history)
+- getRecentCalibration(history, windowSize)
+- isAnswerCorrect(userLow, userHigh, correctAnswer)
+```
+
+**ui.js** - Rendering
+```javascript
+- renderQuestion(question)
+- renderFeedback(answer, isCorrect, stats)
+- renderStats(calibrationData)
+- updateChart(history)
+```
+
+**chart.js** - Visualization
+```javascript
+- createTimeSeriesChart(history)
+- updateChartData(newDataPoint)
+```
+
+This modular structure means:
+- Each module has a single responsibility
+- Clear interfaces make testing easier
+- Can be easily wrapped in React components later
+- No tight coupling to specific DOM elements
 
 ## Question Set for MVP
 
@@ -127,14 +223,21 @@ For each confidence level (e.g., 80%), calculate:
 - Question packs or themed sets
 - Social sharing of scores
 
-## Open Questions & Decisions Needed
+## Design Decisions Made ✓
 
-### For MVP
-1. **Question count per session**: 10? 20? User choice?
-2. **Confidence level input**: Discrete options (50%, 70%, 80%, 90%, 95%) or free-form 0-100%?
-3. **Styling**: Minimal/clean, or more game-like with animations?
-4. **Question ordering**: Random? Sequential? By difficulty?
-5. **Replay behavior**: Can users retry the same questions? New session each time?
+### Core Mechanics
+1. **Question count per session**: ✓ One question at a time, user decides when to stop
+2. **Confidence level input**: ✓ Slider (free-form 0-100% or 50-99%)
+3. **Feedback timing**: ✓ Immediate after each question
+4. **Score tracking**: ✓ Continuous, with time-series visualization and recency weighting (optional)
+5. **Tech stack**: ✓ Vanilla JS with modular structure for future framework migration
+
+### Still To Decide
+1. **Styling**: Minimal/clean, or more game-like with animations?
+2. **Question ordering**: Random? Sequential? Category-based selection?
+3. **Question reuse**: Track which questions user has seen, avoid immediate repeats?
+4. **Confidence range**: Allow 0-100% or restrict to 50-99% (since <50% doesn't make sense for a range estimate)?
+5. **Chart library**: Use a simple library (Chart.js, Recharts) or build custom SVG/Canvas visualization?
 
 ### For Phase 2
 1. **Monetization**: Free? Freemium? Ads?
