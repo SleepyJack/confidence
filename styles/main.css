@@ -255,6 +255,30 @@ input[type="range"]::-moz-range-thumb:hover {
   background: #f8f9fa;
   border-radius: 6px;
   border-left: 4px solid #667eea;
+  margin-bottom: 20px;
+}
+
+/* Distribution visualization */
+.distribution-container {
+  margin-top: 25px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.distribution-container h4 {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+#distribution-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
 }
 
 /* Stats area */

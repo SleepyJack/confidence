@@ -1,5 +1,5 @@
 /**
- * Scoring module - calculates calibration metrics using Brier score
+ * Scoring module - calculates calibration metrics using logarithmic scoring
  */
 
 const Scoring = {
@@ -11,37 +11,77 @@ const Scoring = {
   },
 
   /**
-   * Calculate Brier score for a single answer
-   * Returns a value between 0 (perfect) and 1 (worst)
+   * Calculate log score for a single answer
+   * Returns a log score (typically -10 to -0.1, where higher is better)
    */
-  calculateBrierScore(confidence, isCorrect) {
+  calculateLogScore(userLow, userHigh, confidence, correctAnswer) {
     const confidenceDecimal = confidence / 100;
-    const outcome = isCorrect ? 1 : 0;
-    return Math.pow(confidenceDecimal - outcome, 2);
+    const rangeWidth = userHigh - userLow;
+
+    // Prevent division by zero
+    if (rangeWidth <= 0) return -10; // Worst possible score
+
+    let density;
+
+    if (correctAnswer >= userLow && correctAnswer <= userHigh) {
+      // Answer is inside the range
+      density = confidenceDecimal / rangeWidth;
+    } else {
+      // Answer is outside the range
+      // Remaining probability is spread over a "baseline" area
+      // Use 10x the range width as baseline (could be tuned)
+      const remainingProbability = 1 - confidenceDecimal;
+      const baselineRange = 10 * rangeWidth;
+      density = remainingProbability / baselineRange;
+    }
+
+    // Prevent log(0) or log(negative)
+    density = Math.max(density, 1e-10);
+
+    return Math.log(density);
   },
 
   /**
-   * Calculate average Brier score across all answers
+   * Calculate average log score across all answers
    */
-  getAverageBrierScore(history) {
+  getAverageLogScore(history) {
     if (history.length === 0) return null;
 
-    const totalBrier = history.reduce((sum, answer) => {
-      return sum + this.calculateBrierScore(answer.confidence, answer.isCorrect);
+    const totalLogScore = history.reduce((sum, answer) => {
+      return sum + this.calculateLogScore(
+        answer.userLow,
+        answer.userHigh,
+        answer.confidence,
+        answer.correctAnswer
+      );
     }, 0);
 
-    return totalBrier / history.length;
+    return totalLogScore / history.length;
+  },
+
+  /**
+   * Normalize log score to 0-100% range (higher is better)
+   * Typical log scores range from -10 (terrible) to -0.1 (excellent)
+   */
+  normalizeLogScore(logScore) {
+    // Clamp to reasonable range
+    const clamped = Math.max(-10, Math.min(-0.1, logScore));
+
+    // Map [-10, -0.1] to [0, 100]
+    const normalized = ((clamped + 10) / 9.9) * 100;
+
+    return normalized;
   },
 
   /**
    * Calculate Calibration Score (0-100%, higher is better)
-   * This is (1 - Brier) * 100
+   * Based on logarithmic scoring
    */
   getCalibrationScore(history) {
-    const brierScore = this.getAverageBrierScore(history);
-    if (brierScore === null) return null;
+    const logScore = this.getAverageLogScore(history);
+    if (logScore === null) return null;
 
-    return (1 - brierScore) * 100;
+    return this.normalizeLogScore(logScore);
   },
 
   /**
@@ -100,7 +140,7 @@ const Scoring = {
     if (history.length === 0) {
       return {
         calibrationScore: null,
-        brierScore: null,
+        logScore: null,
         calibrationBias: null,
         actualAccuracy: null,
         averageConfidence: null,
@@ -109,7 +149,7 @@ const Scoring = {
       };
     }
 
-    const brierScore = this.getAverageBrierScore(history);
+    const logScore = this.getAverageLogScore(history);
     const calibrationScore = this.getCalibrationScore(history);
     const calibrationBias = this.getCalibrationBias(history);
     const actualAccuracy = this.getActualAccuracy(history);
@@ -118,7 +158,7 @@ const Scoring = {
 
     return {
       calibrationScore: calibrationScore,
-      brierScore: brierScore,
+      logScore: logScore,
       calibrationBias: calibrationBias,
       actualAccuracy: actualAccuracy,
       averageConfidence: averageConfidence,

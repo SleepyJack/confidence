@@ -22,6 +22,7 @@ const UI = {
       feedbackContainer: document.getElementById('feedback-container'),
       feedbackText: document.getElementById('feedback-text'),
       correctAnswer: document.getElementById('correct-answer'),
+      distributionCanvas: document.getElementById('distribution-canvas'),
       statsTotal: document.getElementById('stats-total'),
       statsScore: document.getElementById('stats-score'),
       statsBias: document.getElementById('stats-bias'),
@@ -36,6 +37,7 @@ const UI = {
 
     this.attachEventListeners();
     Chart.init(this.elements.chartCanvas);
+    Distribution.init(this.elements.distributionCanvas);
 
     // Show welcome modal on first visit
     if (Storage.loadHistory().length === 0) {
@@ -165,6 +167,14 @@ const UI = {
     const q = Game.currentQuestion;
     this.elements.correctAnswer.textContent =
       `The correct answer is: ${q.answer} ${q.unit}`;
+
+    // Draw probability distribution visualization
+    Distribution.draw(
+      this.currentAnswer.userLow,
+      this.currentAnswer.userHigh,
+      this.currentAnswer.confidence,
+      this.currentAnswer.correctAnswer
+    );
 
     // Update stats
     this.updateStats();
