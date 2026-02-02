@@ -388,6 +388,40 @@ input[type="range"]::-moz-range-thumb:hover {
 }
 
 /* ==========================================================================
+   Validation Message
+   ========================================================================== */
+
+.validation-message {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--error);
+  background: var(--error-dim);
+  border: 1px solid rgba(248, 113, 113, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  animation: fadeUp 0.25s var(--ease);
+}
+
+.validation-message.visible {
+  display: block;
+}
+
+.validation-message.shake {
+  animation: shake 0.4s var(--ease);
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(2px); }
+}
+
+/* ==========================================================================
    Buttons
    ========================================================================== */
 

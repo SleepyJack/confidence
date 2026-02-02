@@ -24,6 +24,7 @@ const UI = {
       feedbackText: document.getElementById('feedback-text'),
       correctAnswer: document.getElementById('correct-answer'),
       questionScore: document.getElementById('question-score'),
+      validationMessage: document.getElementById('validation-message'),
       distributionCanvas: document.getElementById('distribution-canvas'),
       statsTotal: document.getElementById('stats-total'),
       statsTotalLabel: document.getElementById('stats-total-label'),
@@ -116,6 +117,7 @@ const UI = {
     this.elements.confidenceValue.textContent = '80%';
 
     // Show question, hide feedback
+    this.hideValidation();
     this.elements.questionContainer.classList.add('active');
     this.elements.feedbackContainer.classList.remove('active');
     this.elements.submitBtn.disabled = false;
@@ -128,6 +130,32 @@ const UI = {
   },
 
   /**
+   * Show inline validation error
+   */
+  showValidation(message) {
+    const el = this.elements.validationMessage;
+    el.textContent = message;
+    el.classList.remove('visible', 'shake');
+    // Force reflow so re-adding classes restarts animations
+    void el.offsetWidth;
+    el.classList.add('visible', 'shake');
+
+    // Auto-hide after a few seconds
+    clearTimeout(this._validationTimer);
+    this._validationTimer = setTimeout(() => {
+      el.classList.remove('visible');
+    }, 4000);
+  },
+
+  /**
+   * Hide inline validation error
+   */
+  hideValidation() {
+    this.elements.validationMessage.classList.remove('visible');
+    clearTimeout(this._validationTimer);
+  },
+
+  /**
    * Handle answer submission
    */
   handleSubmit() {
@@ -137,14 +165,16 @@ const UI = {
 
     // Validate inputs
     if (isNaN(low) || isNaN(high)) {
-      alert('Please enter valid numbers for both bounds');
+      this.showValidation('Enter a number for both bounds');
       return;
     }
 
     if (low >= high) {
-      alert('Low bound must be less than high bound');
+      this.showValidation('Low bound must be less than high bound');
       return;
     }
+
+    this.hideValidation();
 
     // Submit answer
     this.currentAnswer = Game.submitAnswer(low, high, confidence);
