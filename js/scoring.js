@@ -11,29 +11,76 @@ const Scoring = {
   },
 
   /**
-   * Calculate log score for a single answer
+   * Calculate parameters for normal distribution from user's range and confidence
+   * Returns {mean, sigma}
+   */
+  getNormalParams(userLow, userHigh, confidence) {
+    const mean = (userLow + userHigh) / 2;
+    const confidenceDecimal = confidence / 100;
+
+    // Calculate z-score for the confidence level
+    // For confidence C, we want P(userLow < X < userHigh) = C
+    // This means we need the z-score where P(-z < Z < z) = C
+    // So P(Z < z) = (1 + C) / 2
+    const z = this.getZScore((1 + confidenceDecimal) / 2);
+
+    // Calculate sigma such that mean ± z*sigma = [userLow, userHigh]
+    const sigma = (userHigh - mean) / z;
+
+    return {mean, sigma};
+  },
+
+  /**
+   * Approximate inverse normal CDF (z-score calculation)
+   * Uses rational approximation for Φ^(-1)(p)
+   */
+  getZScore(p) {
+    if (p <= 0 || p >= 1) return 0;
+
+    // Rational approximation coefficients (Abramowitz and Stegun)
+    const c0 = 2.515517;
+    const c1 = 0.802853;
+    const c2 = 0.010328;
+    const d1 = 1.432788;
+    const d2 = 0.189269;
+    const d3 = 0.001308;
+
+    let t, z;
+    if (p < 0.5) {
+      t = Math.sqrt(-2 * Math.log(p));
+      z = -((c0 + c1 * t + c2 * t * t) / (1 + d1 * t + d2 * t * t + d3 * t * t * t));
+    } else {
+      t = Math.sqrt(-2 * Math.log(1 - p));
+      z = (c0 + c1 * t + c2 * t * t) / (1 + d1 * t + d2 * t * t + d3 * t * t * t);
+    }
+
+    return z;
+  },
+
+  /**
+   * Calculate normal distribution PDF at x
+   */
+  normalPDF(x, mean, sigma) {
+    const coefficient = 1 / (sigma * Math.sqrt(2 * Math.PI));
+    const exponent = -Math.pow(x - mean, 2) / (2 * sigma * sigma);
+    return coefficient * Math.exp(exponent);
+  },
+
+  /**
+   * Calculate log score for a single answer using normal distribution
    * Returns a log score (typically -10 to -0.1, where higher is better)
    */
   calculateLogScore(userLow, userHigh, confidence, correctAnswer) {
-    const confidenceDecimal = confidence / 100;
     const rangeWidth = userHigh - userLow;
 
     // Prevent division by zero
     if (rangeWidth <= 0) return -10; // Worst possible score
 
-    let density;
+    // Get normal distribution parameters
+    const {mean, sigma} = this.getNormalParams(userLow, userHigh, confidence);
 
-    if (correctAnswer >= userLow && correctAnswer <= userHigh) {
-      // Answer is inside the range
-      density = confidenceDecimal / rangeWidth;
-    } else {
-      // Answer is outside the range
-      // Remaining probability is spread over a "baseline" area
-      // Use 10x the range width as baseline (could be tuned)
-      const remainingProbability = 1 - confidenceDecimal;
-      const baselineRange = 10 * rangeWidth;
-      density = remainingProbability / baselineRange;
-    }
+    // Calculate probability density at the correct answer
+    let density = this.normalPDF(correctAnswer, mean, sigma);
 
     // Prevent log(0) or log(negative)
     density = Math.max(density, 1e-10);
