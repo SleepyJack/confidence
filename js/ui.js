@@ -12,6 +12,7 @@ const UI = {
   init() {
     this.elements = {
       questionText: document.getElementById('question-text'),
+      questionCategory: document.getElementById('question-category'),
       lowInput: document.getElementById('low-input'),
       highInput: document.getElementById('high-input'),
       confidenceSlider: document.getElementById('confidence-slider'),
@@ -25,6 +26,7 @@ const UI = {
       questionScore: document.getElementById('question-score'),
       distributionCanvas: document.getElementById('distribution-canvas'),
       statsTotal: document.getElementById('stats-total'),
+      statsTotalLabel: document.getElementById('stats-total-label'),
       statsScore: document.getElementById('stats-score'),
       statsBias: document.getElementById('stats-bias'),
       statsStatus: document.getElementById('stats-status'),
@@ -102,6 +104,11 @@ const UI = {
 
     this.elements.questionText.textContent = question.question;
 
+    // Update category eyebrow
+    if (this.elements.questionCategory) {
+      this.elements.questionCategory.textContent = question.category || 'Question';
+    }
+
     // Reset inputs
     this.elements.lowInput.value = '';
     this.elements.highInput.value = '';
@@ -159,10 +166,10 @@ const UI = {
     // Display result
     const isCorrect = this.currentAnswer.isCorrect;
     this.elements.feedbackText.innerHTML = isCorrect
-      ? '✓ <strong>Correct!</strong> The answer was within your range.'
-      : '✗ <strong>Incorrect.</strong> The answer was outside your range.';
+      ? '<strong>Correct</strong> — The answer was within your range.'
+      : '<strong>Incorrect</strong> — The answer was outside your range.';
 
-    this.elements.feedbackText.className = isCorrect ? 'correct' : 'incorrect';
+    this.elements.feedbackText.className = 'feedback-message ' + (isCorrect ? 'correct' : 'incorrect');
 
     // Show correct answer
     const q = Game.currentQuestion;
@@ -179,7 +186,7 @@ const UI = {
     const normalizedScore = Scoring.normalizeLogScore(logScore);
 
     this.elements.questionScore.textContent =
-      `This answer scored: ${normalizedScore.toFixed(1)}% (log score: ${logScore.toFixed(2)})`;
+      `Score: ${normalizedScore.toFixed(1)}%  (log score: ${logScore.toFixed(2)})`;
 
     // Draw probability distribution visualization
     Distribution.draw(
@@ -209,6 +216,9 @@ const UI = {
 
     // Total questions
     this.elements.statsTotal.textContent = m.totalAnswered;
+    if (this.elements.statsTotalLabel) {
+      this.elements.statsTotalLabel.textContent = m.totalAnswered + ' answered';
+    }
 
     // Display metrics
     if (m.calibrationScore !== null) {
@@ -225,14 +235,14 @@ const UI = {
       // Status color based on bias
       const absBias = Math.abs(m.calibrationBias);
       if (absBias < 5) {
-        this.elements.statsStatus.className = 'status-good';
-        this.elements.statsBias.className = 'bias-good';
+        this.elements.statsStatus.className = 'metric-status status-good';
+        this.elements.statsBias.className = 'metric-value-medium bias-good';
       } else if (m.calibrationBias > 0) {
-        this.elements.statsStatus.className = 'status-overconfident';
-        this.elements.statsBias.className = 'bias-overconfident';
+        this.elements.statsStatus.className = 'metric-status status-overconfident';
+        this.elements.statsBias.className = 'metric-value-medium bias-overconfident';
       } else {
-        this.elements.statsStatus.className = 'status-underconfident';
-        this.elements.statsBias.className = 'bias-underconfident';
+        this.elements.statsStatus.className = 'metric-status status-underconfident';
+        this.elements.statsBias.className = 'metric-value-medium bias-underconfident';
       }
 
       // Secondary metrics (accuracy and avg confidence)
@@ -242,13 +252,13 @@ const UI = {
       // Update chart
       Chart.draw(state.history);
     } else {
-      this.elements.statsScore.textContent = '-';
-      this.elements.statsBias.textContent = '-';
+      this.elements.statsScore.textContent = '\u2014';
+      this.elements.statsBias.textContent = '\u2014';
+      this.elements.statsBias.className = 'metric-value-medium';
       this.elements.statsStatus.textContent = 'No data yet';
-      this.elements.statsStatus.className = '';
-      this.elements.statsBias.className = '';
-      this.elements.statsAccuracy.textContent = '-';
-      this.elements.statsAvgConfidence.textContent = '-';
+      this.elements.statsStatus.className = 'metric-status';
+      this.elements.statsAccuracy.textContent = '\u2014';
+      this.elements.statsAvgConfidence.textContent = '\u2014';
       Chart.drawEmpty();
     }
   },

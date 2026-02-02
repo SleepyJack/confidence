@@ -1,5 +1,6 @@
 /**
  * Chart module - time-series visualization using Chart.js
+ * Dark theme variant
  */
 
 const Chart = {
@@ -35,14 +36,13 @@ const Chart = {
     // Create gradient for the line
     const ctx = this.canvas.getContext('2d');
     const gradient = ctx.createLinearGradient(0, 0, this.canvas.width, 0);
-    gradient.addColorStop(0, '#6366f1');
-    gradient.addColorStop(0.5, '#8b5cf6');
-    gradient.addColorStop(1, '#a855f7');
+    gradient.addColorStop(0, '#e2a84b');
+    gradient.addColorStop(1, '#d4913a');
 
     // Create gradient for the fill area
     const fillGradient = ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-    fillGradient.addColorStop(0, 'rgba(139, 92, 246, 0.3)');
-    fillGradient.addColorStop(1, 'rgba(139, 92, 246, 0.05)');
+    fillGradient.addColorStop(0, 'rgba(226, 168, 75, 0.2)');
+    fillGradient.addColorStop(1, 'rgba(226, 168, 75, 0.02)');
 
     // Destroy existing chart if it exists
     if (this.chartInstance) {
@@ -59,17 +59,17 @@ const Chart = {
           data: scores,
           borderColor: gradient,
           backgroundColor: fillGradient,
-          borderWidth: 3,
-          pointBackgroundColor: '#8b5cf6',
-          pointBorderColor: '#fff',
+          borderWidth: 2,
+          pointBackgroundColor: '#e2a84b',
+          pointBorderColor: '#181a20',
           pointBorderWidth: 2,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointHoverBackgroundColor: '#8b5cf6',
-          pointHoverBorderColor: '#fff',
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointHoverBackgroundColor: '#e2a84b',
+          pointHoverBorderColor: '#181a20',
           pointHoverBorderWidth: 2,
           fill: true,
-          tension: 0.3, // Smooth curves
+          tension: 0.35,
         }]
       },
       options: {
@@ -80,19 +80,27 @@ const Chart = {
             display: false
           },
           tooltip: {
-            backgroundColor: 'rgba(31, 41, 55, 0.95)',
-            titleColor: '#fff',
-            bodyColor: '#fff',
-            borderColor: '#8b5cf6',
+            backgroundColor: '#1e2028',
+            titleColor: '#e8e6e3',
+            bodyColor: '#e8e6e3',
+            borderColor: 'rgba(255,255,255,0.08)',
             borderWidth: 1,
             padding: 10,
             displayColors: false,
+            titleFont: {
+              family: 'JetBrains Mono, monospace',
+              size: 11
+            },
+            bodyFont: {
+              family: 'JetBrains Mono, monospace',
+              size: 11
+            },
             callbacks: {
               title: function(tooltipItems) {
-                return `Question ${tooltipItems[0].label}`;
+                return 'Question ' + tooltipItems[0].label;
               },
               label: function(context) {
-                return `Score: ${context.parsed.y.toFixed(1)}%`;
+                return 'Score: ' + context.parsed.y.toFixed(1) + '%';
               }
             }
           }
@@ -101,23 +109,23 @@ const Chart = {
           x: {
             title: {
               display: true,
-              text: 'Questions Answered',
-              color: '#374151',
+              text: 'Questions',
+              color: '#5c5955',
               font: {
-                family: 'Inter',
-                size: 11,
-                weight: '600'
+                family: 'JetBrains Mono, monospace',
+                size: 10,
+                weight: '500'
               }
             },
             grid: {
-              color: 'rgba(229, 231, 235, 0.5)',
+              color: 'rgba(255, 255, 255, 0.04)',
               drawBorder: false
             },
             ticks: {
-              color: '#6b7280',
+              color: '#5c5955',
               font: {
-                family: 'Inter',
-                size: 10,
+                family: 'JetBrains Mono, monospace',
+                size: 9,
                 weight: '500'
               }
             }
@@ -125,25 +133,25 @@ const Chart = {
           y: {
             title: {
               display: true,
-              text: 'Calibration Score (%)',
-              color: '#374151',
+              text: 'Score',
+              color: '#5c5955',
               font: {
-                family: 'Inter',
-                size: 11,
-                weight: '600'
+                family: 'JetBrains Mono, monospace',
+                size: 10,
+                weight: '500'
               }
             },
             min: 0,
             max: 100,
             grid: {
-              color: 'rgba(229, 231, 235, 0.5)',
+              color: 'rgba(255, 255, 255, 0.04)',
               drawBorder: false
             },
             ticks: {
-              color: '#6b7280',
+              color: '#5c5955',
               font: {
-                family: 'Inter',
-                size: 10,
+                family: 'JetBrains Mono, monospace',
+                size: 9,
                 weight: '500'
               },
               callback: function(value) {
@@ -173,8 +181,8 @@ const Chart = {
     // Draw empty state message
     const ctx = this.canvas.getContext('2d');
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    ctx.fillStyle = '#9ca3af';
-    ctx.font = '500 13px Inter, sans-serif';
+    ctx.fillStyle = '#5c5955';
+    ctx.font = '500 12px JetBrains Mono, monospace';
     ctx.textAlign = 'center';
     ctx.fillText('Answer questions to see your progress',
       this.canvas.width / 2, this.canvas.height / 2);
