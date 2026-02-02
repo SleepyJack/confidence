@@ -15,7 +15,16 @@ const Distribution = {
   },
 
   /**
-   * Draw probability distribution visualization
+   * Calculate normal distribution PDF at x
+   */
+  normalPDF(x, mean, sigma) {
+    const coefficient = 1 / (sigma * Math.sqrt(2 * Math.PI));
+    const exponent = -Math.pow(x - mean, 2) / (2 * sigma * sigma);
+    return coefficient * Math.exp(exponent);
+  },
+
+  /**
+   * Draw probability distribution visualization with bell curve
    */
   draw(userLow, userHigh, confidence, correctAnswer) {
     if (!this.ctx) return;
@@ -26,11 +35,19 @@ const Distribution = {
     const height = this.canvas.height;
     const padding = 40;
 
-    // Calculate display range (with some padding around the data)
+    // Calculate normal distribution parameters
+    const mean = (userLow + userHigh) / 2;
+    const confidenceDecimal = confidence / 100;
+
+    // Calculate sigma using same logic as scoring.js
+    const z = Scoring.getZScore((1 + confidenceDecimal) / 2);
+    const sigma = (userHigh - mean) / z;
+
+    // Calculate display range (show ±3σ or enough to include correct answer)
     const rangeWidth = userHigh - userLow;
-    const displayPadding = Math.max(rangeWidth * 0.5, 10);
-    const displayMin = Math.min(userLow, correctAnswer) - displayPadding;
-    const displayMax = Math.max(userHigh, correctAnswer) + displayPadding;
+    const displayPadding = Math.max(rangeWidth * 0.8, sigma * 3);
+    const displayMin = Math.min(mean - displayPadding, correctAnswer - 10);
+    const displayMax = Math.max(mean + displayPadding, correctAnswer + 10);
     const displayRange = displayMax - displayMin;
 
     // Scale functions
@@ -38,18 +55,16 @@ const Distribution = {
       return padding + ((value - displayMin) / displayRange) * (width - 2 * padding);
     };
 
-    const maxDensityHeight = height - 2 * padding - 30;
+    const baselineY = height - padding - 10;
+    const maxDensityHeight = baselineY - padding - 30;
 
-    // Calculate density (probability per unit)
-    const confidenceDecimal = confidence / 100;
-    const density = confidenceDecimal / rangeWidth;
-
-    // Normalize density for display (height)
-    // We want the bar to be reasonably tall, so let's scale it
-    const densityHeight = Math.min(maxDensityHeight * 0.7, maxDensityHeight);
+    // Calculate peak density for scaling
+    const peakDensity = this.normalPDF(mean, mean, sigma);
+    const yScale = (density) => {
+      return baselineY - (density / peakDensity) * maxDensityHeight * 0.85;
+    };
 
     // Draw baseline
-    const baselineY = height - padding - 10;
     this.ctx.strokeStyle = '#9ca3af';
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
@@ -72,118 +87,167 @@ const Distribution = {
     const midValue = (displayMin + displayMax) / 2;
     this.ctx.fillText(midValue.toFixed(0), width / 2, height - padding + 15);
 
-    // Draw background probability (1 - confidence)
-    const bgGradient = this.ctx.createLinearGradient(0, baselineY - maxDensityHeight * 0.15, 0, baselineY);
+    // Generate points for the bell curve
+    const numPoints = 200;
+    const curvePoints = [];
+    for (let i = 0; i <= numPoints; i++) {
+      const value = displayMin + (i / numPoints) * displayRange;
+      const density = this.normalPDF(value, mean, sigma);
+      const x = xScale(value);
+      const y = yScale(density);
+      curvePoints.push({x, y, value});
+    }
+
+    // Draw shaded area under the full curve (light gray)
+    const bgGradient = this.ctx.createLinearGradient(0, padding + 30, 0, baselineY);
     bgGradient.addColorStop(0, 'rgba(156, 163, 175, 0.15)');
-    bgGradient.addColorStop(1, 'rgba(156, 163, 175, 0.05)');
+    bgGradient.addColorStop(1, 'rgba(156, 163, 175, 0.02)');
+
     this.ctx.fillStyle = bgGradient;
-    this.ctx.fillRect(
-      padding,
-      baselineY - maxDensityHeight * 0.15,
-      width - 2 * padding,
-      maxDensityHeight * 0.15
-    );
+    this.ctx.beginPath();
+    this.ctx.moveTo(curvePoints[0].x, baselineY);
+    curvePoints.forEach(point => {
+      this.ctx.lineTo(point.x, point.y);
+    });
+    this.ctx.lineTo(curvePoints[curvePoints.length - 1].x, baselineY);
+    this.ctx.closePath();
+    this.ctx.fill();
 
-    // Draw label for background probability
-    this.ctx.fillStyle = '#9ca3af';
-    this.ctx.font = '11px Inter, sans-serif';
-    this.ctx.textAlign = 'left';
-    this.ctx.fillText(
-      `${(100 - confidence).toFixed(0)}% probability elsewhere`,
-      padding + 5,
-      baselineY - maxDensityHeight * 0.15 - 8
-    );
-
-    // Draw user's range (the confidence interval)
+    // Draw shaded area within confidence bounds (colored gradient)
     const rangeX1 = xScale(userLow);
     const rangeX2 = xScale(userHigh);
-    const rangeBarWidth = rangeX2 - rangeX1;
 
-    // Gradient for the range bar
-    const gradient = this.ctx.createLinearGradient(0, baselineY - densityHeight, 0, baselineY);
-    gradient.addColorStop(0, '#6366f1');
-    gradient.addColorStop(0.5, '#8b5cf6');
-    gradient.addColorStop(1, '#a855f7');
+    const rangeGradient = this.ctx.createLinearGradient(0, padding + 30, 0, baselineY);
+    rangeGradient.addColorStop(0, 'rgba(139, 92, 246, 0.4)');
+    rangeGradient.addColorStop(0.5, 'rgba(139, 92, 246, 0.25)');
+    rangeGradient.addColorStop(1, 'rgba(139, 92, 246, 0.1)');
 
-    this.ctx.fillStyle = gradient;
+    this.ctx.fillStyle = rangeGradient;
+    this.ctx.beginPath();
+    this.ctx.moveTo(rangeX1, baselineY);
 
-    // Add subtle shadow before drawing
-    this.ctx.shadowColor = 'rgba(99, 102, 241, 0.3)';
-    this.ctx.shadowBlur = 15;
-    this.ctx.shadowOffsetY = 4;
+    // Only draw curve points within the range
+    const rangePoints = curvePoints.filter(p => p.value >= userLow && p.value <= userHigh);
+    if (rangePoints.length > 0) {
+      rangePoints.forEach(point => {
+        this.ctx.lineTo(point.x, point.y);
+      });
+    } else {
+      // If no points in range, just draw a line at the bounds
+      this.ctx.lineTo(rangeX1, yScale(this.normalPDF(userLow, mean, sigma)));
+      this.ctx.lineTo(rangeX2, yScale(this.normalPDF(userHigh, mean, sigma)));
+    }
 
-    this.ctx.fillRect(
-      rangeX1,
-      baselineY - densityHeight,
-      rangeBarWidth,
-      densityHeight
-    );
+    this.ctx.lineTo(rangeX2, baselineY);
+    this.ctx.closePath();
+    this.ctx.fill();
+
+    // Draw the bell curve line with gradient
+    const lineGradient = this.ctx.createLinearGradient(padding, 0, width - padding, 0);
+    lineGradient.addColorStop(0, '#6366f1');
+    lineGradient.addColorStop(0.5, '#8b5cf6');
+    lineGradient.addColorStop(1, '#a855f7');
+
+    this.ctx.strokeStyle = lineGradient;
+    this.ctx.lineWidth = 3;
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+
+    // Add subtle glow to the curve
+    this.ctx.shadowColor = 'rgba(139, 92, 246, 0.3)';
+    this.ctx.shadowBlur = 8;
+
+    this.ctx.beginPath();
+    curvePoints.forEach((point, i) => {
+      if (i === 0) {
+        this.ctx.moveTo(point.x, point.y);
+      } else {
+        this.ctx.lineTo(point.x, point.y);
+      }
+    });
+    this.ctx.stroke();
 
     // Reset shadow
     this.ctx.shadowColor = 'transparent';
     this.ctx.shadowBlur = 0;
-    this.ctx.shadowOffsetY = 0;
 
-    // Border for range
-    this.ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
+    // Draw vertical lines at bounds
+    this.ctx.strokeStyle = 'rgba(99, 102, 241, 0.6)';
     this.ctx.lineWidth = 2;
-    this.ctx.strokeRect(
-      rangeX1,
-      baselineY - densityHeight,
-      rangeBarWidth,
-      densityHeight
-    );
+    this.ctx.setLineDash([5, 5]);
 
-    // Label for user's range
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-    this.ctx.font = '600 13px Inter, sans-serif';
-    this.ctx.textAlign = 'center';
-    const labelY = baselineY - densityHeight / 2;
-    this.ctx.fillText(`Your ${confidence}%`, (rangeX1 + rangeX2) / 2, labelY - 8);
-    this.ctx.font = '500 11px Inter, sans-serif';
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-    this.ctx.fillText('confidence', (rangeX1 + rangeX2) / 2, labelY + 6);
+    // Left bound
+    this.ctx.beginPath();
+    this.ctx.moveTo(rangeX1, baselineY);
+    this.ctx.lineTo(rangeX1, yScale(this.normalPDF(userLow, mean, sigma)));
+    this.ctx.stroke();
 
-    // Draw range bounds labels with background
-    this.ctx.fillStyle = '#1f2937';
+    // Right bound
+    this.ctx.beginPath();
+    this.ctx.moveTo(rangeX2, baselineY);
+    this.ctx.lineTo(rangeX2, yScale(this.normalPDF(userHigh, mean, sigma)));
+    this.ctx.stroke();
+
+    this.ctx.setLineDash([]); // Reset dash
+
+    // Draw range bounds labels
+    this.ctx.fillStyle = '#6366f1';
     this.ctx.font = '600 11px Inter, sans-serif';
     this.ctx.textAlign = 'center';
 
-    // Add subtle background for better readability
-    this.ctx.globalAlpha = 0.1;
-    this.ctx.fillRect(rangeX1 - 20, baselineY - densityHeight - 20, 40, 16);
-    this.ctx.fillRect(rangeX2 - 20, baselineY - densityHeight - 20, 40, 16);
-    this.ctx.globalAlpha = 1;
+    const boundsLabelY = Math.min(
+      yScale(this.normalPDF(userLow, mean, sigma)),
+      yScale(this.normalPDF(userHigh, mean, sigma))
+    ) - 15;
 
-    this.ctx.fillText(userLow.toFixed(0), rangeX1, baselineY - densityHeight - 8);
-    this.ctx.fillText(userHigh.toFixed(0), rangeX2, baselineY - densityHeight - 8);
+    this.ctx.fillText(userLow.toFixed(0), rangeX1, boundsLabelY);
+    this.ctx.fillText(userHigh.toFixed(0), rangeX2, boundsLabelY);
+
+    // Label for confidence area
+    this.ctx.fillStyle = '#6366f1';
+    this.ctx.font = '600 12px Inter, sans-serif';
+    this.ctx.textAlign = 'center';
+    const labelY = baselineY - maxDensityHeight * 0.4;
+    this.ctx.fillText(`${confidence}% confidence interval`, (rangeX1 + rangeX2) / 2, labelY);
 
     // Draw correct answer marker
     const answerX = xScale(correctAnswer);
+    const answerY = yScale(this.normalPDF(correctAnswer, mean, sigma));
     const isInside = correctAnswer >= userLow && correctAnswer <= userHigh;
 
-    // Arrow pointing to answer with gradient
+    // Vertical line from answer to curve
     const markerColor = isInside ? '#10b981' : '#ef4444';
     this.ctx.strokeStyle = markerColor;
-    this.ctx.fillStyle = markerColor;
     this.ctx.lineWidth = 3;
 
     // Add glow effect
     this.ctx.shadowColor = markerColor;
     this.ctx.shadowBlur = 10;
 
-    // Vertical line
     this.ctx.beginPath();
     this.ctx.moveTo(answerX, padding + 25);
     this.ctx.lineTo(answerX, baselineY);
     this.ctx.stroke();
 
     // Arrow head
+    this.ctx.fillStyle = markerColor;
     this.ctx.beginPath();
     this.ctx.moveTo(answerX, padding + 25);
     this.ctx.lineTo(answerX - 7, padding + 36);
     this.ctx.lineTo(answerX + 7, padding + 36);
     this.ctx.closePath();
+    this.ctx.fill();
+
+    // Dot on the curve at the answer
+    this.ctx.beginPath();
+    this.ctx.arc(answerX, answerY, 6, 0, 2 * Math.PI);
+    this.ctx.fill();
+
+    // White center
+    this.ctx.shadowBlur = 0;
+    this.ctx.fillStyle = '#fff';
+    this.ctx.beginPath();
+    this.ctx.arc(answerX, answerY, 3, 0, 2 * Math.PI);
     this.ctx.fill();
 
     // Reset shadow
@@ -208,8 +272,8 @@ const Distribution = {
     this.ctx.textAlign = 'left';
 
     const infoText = isInside
-      ? '✓ Answer captured! Narrower ranges with high confidence score better.'
-      : '✗ Answer missed! High confidence outside your range = large penalty.';
+      ? '✓ Answer captured! Narrower ranges (taller peaks) score better.'
+      : '✗ Answer missed! The farther from the peak, the larger the penalty.';
 
     this.ctx.fillText(infoText, padding, height - 6);
   },
