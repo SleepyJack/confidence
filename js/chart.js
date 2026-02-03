@@ -5,16 +5,16 @@
 
 const Chart = {
   scoreCanvas: null,
-  biasCanvas: null,
+  confidenceBiasCanvas: null,
   scoreChartInstance: null,
-  biasChartInstance: null,
+  confidenceBiasChartInstance: null,
 
   /**
    * Initialize charts with canvas elements
    */
-  init(scoreCanvasElement, biasCanvasElement) {
+  init(scoreCanvasElement, confidenceBiasCanvasElement) {
     this.scoreCanvas = scoreCanvasElement;
-    this.biasCanvas = biasCanvasElement;
+    this.confidenceBiasCanvas = confidenceBiasCanvasElement;
   },
 
   /**
@@ -46,7 +46,7 @@ const Chart = {
    */
   draw(history) {
     this._drawScore(history);
-    this._drawBias(history);
+    this._drawConfidenceBias(history);
   },
 
   /**
@@ -130,34 +130,34 @@ const Chart = {
   },
 
   /**
-   * Draw bias time-series chart
+   * Draw confidence bias time-series chart
    */
-  _drawBias(history) {
-    if (!this.biasCanvas || history.length < 1) {
-      this._drawEmpty(this.biasCanvas, this.biasChartInstance, 'biasChartInstance');
+  _drawConfidenceBias(history) {
+    if (!this.confidenceBiasCanvas || history.length < 1) {
+      this._drawEmpty(this.confidenceBiasCanvas, this.confidenceBiasChartInstance, 'confidenceBiasChartInstance');
       return;
     }
 
-    const biasData = Scoring.getBiasTimeSeriesData(history);
+    const biasData = Scoring.getConfidenceBiasTimeSeriesData(history);
     if (biasData.length === 0) {
-      this._drawEmpty(this.biasCanvas, this.biasChartInstance, 'biasChartInstance');
+      this._drawEmpty(this.confidenceBiasCanvas, this.confidenceBiasChartInstance, 'confidenceBiasChartInstance');
       return;
     }
 
     const labels = biasData.map((_, i) => i + 1);
-    const biases = biasData.map(p => p.bias);
+    const biases = biasData.map(p => p.confidenceBias);
 
-    const ctx = this.biasCanvas.getContext('2d');
+    const ctx = this.confidenceBiasCanvas.getContext('2d');
 
     // Color points by bias direction
     const pointColors = biases.map(b => {
       if (Math.abs(b) < 5) return '#4ade80';
-      return b > 0 ? '#f87171' : '#60a5fa';
+      return b > 0 ? '#60a5fa' : '#f87171';
     });
 
-    if (this.biasChartInstance) this.biasChartInstance.destroy();
+    if (this.confidenceBiasChartInstance) this.confidenceBiasChartInstance.destroy();
 
-    this.biasChartInstance = new window.Chart(ctx, {
+    this.confidenceBiasChartInstance = new window.Chart(ctx, {
       type: 'line',
       data: {
         labels: labels,
@@ -235,7 +235,7 @@ const Chart = {
    */
   drawEmpty() {
     this._drawEmpty(this.scoreCanvas, this.scoreChartInstance, 'scoreChartInstance');
-    this._drawEmpty(this.biasCanvas, this.biasChartInstance, 'biasChartInstance');
+    this._drawEmpty(this.confidenceBiasCanvas, this.confidenceBiasChartInstance, 'confidenceBiasChartInstance');
   },
 
   /**

@@ -105,10 +105,10 @@
             <span class="stats-count" id="stats-total-label">0 answered</span>
           </div>
 
-          <!-- Primary Metric: Calibration Score + Chart -->
+          <!-- Primary Metric: Precision Score + Chart -->
           <div class="primary-metric">
             <div class="metric-label-row">
-              <span class="metric-label">Calibration Score</span>
+              <span class="metric-label">Precision Score</span>
               <span class="metric-hint">higher is better</span>
             </div>
             <div class="metric-value-large" id="stats-score">&mdash;</div>
@@ -117,20 +117,7 @@
             <canvas id="chart-canvas"></canvas>
           </div>
 
-          <!-- Secondary Metric: Calibration Bias + Chart -->
-          <div class="secondary-metric">
-            <div class="metric-label-row">
-              <span class="metric-label">Calibration Bias</span>
-              <span class="metric-status" id="stats-status">No data yet</span>
-            </div>
-            <div class="metric-value-medium" id="stats-bias">&mdash;</div>
-            <div class="metric-hint">Aim for 0%</div>
-          </div>
-          <div class="chart-container">
-            <canvas id="bias-chart-canvas"></canvas>
-          </div>
-
-          <!-- Secondary Metric: Over/Under Confidence Score -->
+          <!-- Secondary Metric: Over/Under Confidence Score + Chart -->
           <div class="secondary-metric">
             <div class="metric-label-row">
               <span class="metric-label">Over/Under Confidence</span>
@@ -138,6 +125,9 @@
             </div>
             <div class="metric-value-medium" id="stats-confidence-bias">&mdash;</div>
             <div class="metric-hint">0 = perfect, + = underconfident, - = overconfident</div>
+          </div>
+          <div class="chart-container">
+            <canvas id="confidence-bias-chart-canvas"></canvas>
           </div>
 
           <div class="stats-divider"></div>

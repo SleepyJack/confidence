@@ -253,19 +253,19 @@ const Scoring = {
   },
 
   /**
-   * Get bias data points for time-series chart
+   * Get confidence bias data points for time-series chart
    */
-  getBiasTimeSeriesData(history) {
+  getConfidenceBiasTimeSeriesData(history) {
     const data = [];
     let runningHistory = [];
 
     history.forEach((answer, index) => {
       runningHistory.push(answer);
-      const bias = this.getCalibrationBias(runningHistory);
-      if (bias !== null) {
+      const confidenceBias = this.getConfidenceBiasScore(runningHistory);
+      if (confidenceBias !== null) {
         data.push({
           questionNumber: index + 1,
-          bias: bias,
+          confidenceBias: confidenceBias,
           timestamp: answer.timestamp
         });
       }

@@ -29,21 +29,19 @@ const UI = {
       statsTotal: document.getElementById('stats-total'),
       statsTotalLabel: document.getElementById('stats-total-label'),
       statsScore: document.getElementById('stats-score'),
-      statsBias: document.getElementById('stats-bias'),
-      statsStatus: document.getElementById('stats-status'),
       statsConfidenceBias: document.getElementById('stats-confidence-bias'),
       statsConfidenceStatus: document.getElementById('stats-confidence-status'),
       statsAccuracy: document.getElementById('stats-accuracy'),
       statsAvgConfidence: document.getElementById('stats-avg-confidence'),
       chartCanvas: document.getElementById('chart-canvas'),
-      biasChartCanvas: document.getElementById('bias-chart-canvas'),
+      confidenceBiasChartCanvas: document.getElementById('confidence-bias-chart-canvas'),
       welcomeModal: document.getElementById('welcome-modal'),
       startBtn: document.getElementById('start-btn'),
       resetBtn: document.getElementById('reset-btn')
     };
 
     this.attachEventListeners();
-    Chart.init(this.elements.chartCanvas, this.elements.biasChartCanvas);
+    Chart.init(this.elements.chartCanvas, this.elements.confidenceBiasChartCanvas);
     Distribution.init(this.elements.distributionCanvas);
 
     // Show welcome modal on first visit
@@ -255,30 +253,10 @@ const UI = {
 
     // Display metrics
     if (m.calibrationScore !== null) {
-      // Calibration Score (headline metric)
+      // Precision Score (headline metric)
       this.elements.statsScore.textContent = m.calibrationScore.toFixed(1) + '%';
 
-      // Calibration Bias (over/under confident)
-      const biasSign = m.calibrationBias >= 0 ? '+' : '';
-      this.elements.statsBias.textContent = biasSign + m.calibrationBias.toFixed(1) + '%';
-
-      // Status (based on bias)
-      this.elements.statsStatus.textContent = m.status;
-
-      // Status color based on bias
-      const absBias = Math.abs(m.calibrationBias);
-      if (absBias < 5) {
-        this.elements.statsStatus.className = 'metric-status status-good';
-        this.elements.statsBias.className = 'metric-value-medium bias-good';
-      } else if (m.calibrationBias > 0) {
-        this.elements.statsStatus.className = 'metric-status status-overconfident';
-        this.elements.statsBias.className = 'metric-value-medium bias-overconfident';
-      } else {
-        this.elements.statsStatus.className = 'metric-status status-underconfident';
-        this.elements.statsBias.className = 'metric-value-medium bias-underconfident';
-      }
-
-      // Confidence Bias Score (new metric)
+      // Over/Under Confidence Score
       const confBiasSign = m.confidenceBiasScore >= 0 ? '+' : '';
       this.elements.statsConfidenceBias.textContent = confBiasSign + m.confidenceBiasScore.toFixed(1);
 
@@ -308,10 +286,6 @@ const UI = {
       Chart.draw(state.history);
     } else {
       this.elements.statsScore.textContent = '\u2014';
-      this.elements.statsBias.textContent = '\u2014';
-      this.elements.statsBias.className = 'metric-value-medium';
-      this.elements.statsStatus.textContent = 'No data yet';
-      this.elements.statsStatus.className = 'metric-status';
       this.elements.statsConfidenceBias.textContent = '\u2014';
       this.elements.statsConfidenceBias.className = 'metric-value-medium';
       this.elements.statsConfidenceStatus.textContent = 'No data yet';
