@@ -1,522 +1,209 @@
-# Implementation Plan
+# Confidence Calibration Game — Plan
 
 ## Project Overview
 
-Building a confidence calibration game as a web application, starting with a minimal viable product (MVP) and clear paths for future enhancement.
+A confidence calibration game where users estimate numerical values with confidence intervals. Tracks calibration over time via two metrics: a **Precision Score** (logarithmic scoring rewarding accuracy + narrow ranges) and an **Over/Under Confidence Score** (measures systematic confidence bias). See `docs/scoring-system.md` for full scoring documentation.
 
-## MVP Scope (Phase 1)
+---
 
-### Core Features
-- Single-page web application
-- Static question set (30-50 curated questions)
-- User inputs: numerical range (low/high bounds) + confidence level
-- Immediate feedback after each question (correct/incorrect)
-- End-of-game summary with calibration statistics
-- Browser localStorage for session persistence
+## MVP — Complete ✓
 
-### Technical Architecture
+All of the following has been implemented and is live:
 
-**Frontend Only (No Backend Required for MVP)**
-- HTML/CSS/JavaScript (Vanilla JS for MVP)
-- **Modular structure** to enable easy migration to React/Vue later:
-  - Separate modules: `game.js` (game logic), `storage.js` (localStorage), `ui.js` (DOM manipulation), `scoring.js` (calibration calculations)
-  - Clear interfaces between modules
-  - No tight coupling to DOM structure
+- Single-page vanilla JS app, modular architecture (`game.js`, `scoring.js`, `ui.js`, `chart.js`, `distribution.js`, `storage.js`)
+- 45 curated questions in `data/questions.json`
+- Range input (low/high) + confidence slider (50-99%)
+- Immediate feedback with bell curve distribution visualization
+- Two metrics: Precision Score (log scoring + EMA) and Over/Under Confidence (EMA)
+- Both charts show raw scatter points + smoothed EMA line
+- localStorage persistence
+- Chart.js for time-series, custom canvas for distribution
+- Dark theme with JetBrains Mono
 
-**Data Storage**
-- Questions: Static JSON file embedded in the project
-- User answers & history: Browser localStorage
-- Format: `{ questionId, userLow, userHigh, confidence, correctAnswer, isCorrect, timestamp }`
+### Decisions Made During MVP
 
-**Question Format**
-```json
-{
-  "id": "moon-distance",
-  "question": "What is the average distance from Earth to the Moon in kilometers?",
-  "answer": 384400,
-  "unit": "km",
-  "category": "astronomy",
-  "difficulty": "medium"
-}
+| Item | Decision |
+|------|----------|
+| Scoring | Logarithmic scoring with normal distribution (proper scoring rule) |
+| Averaging | EMA (α=0.3) replaces simple mean — rewards improvement, reduces noise |
+| Confidence range | 50-99% — below 50% is illogical ("my range is probably wrong") |
+| Distribution model | Normal over uniform — more intuitive, prettier, rewards precision |
+| Calibration Bias metric | Dropped — replaced by Over/Under Confidence Score |
+| Chart library | Chart.js for time-series, custom canvas for distribution viz |
+| Per-question score | Shown in feedback alongside distribution |
+
+---
+
+## Next Up: Question Generation
+
+### Motivation
+
+AI-generated questions are the most unique aspect of the project and the natural next step. The static set of 45 questions will eventually run out for engaged users.
+
+### Architecture: `/api/next-question`
+
+The key insight is to introduce a **thin API layer** between the frontend and the question source. The frontend calls one endpoint and doesn't care where the question comes from — static JSON, a database, or AI generation. This decouples question management from the game entirely.
+
+```
+Frontend
+    │
+    │  GET /api/next-question
+    ▼
+Serverless Function          ← single point of change
+    │
+    ├── questions.json        (static pool, works today)
+    └── Claude API            (AI generation, key in env vars)
 ```
 
-### Scoring Algorithm
-
-**Calibration Calculation**:
-For each answer, determine if the correct answer falls within the user's stated range:
-- If correct answer is within [userLow, userHigh]: **correct**
-- If outside the range: **incorrect**
-
-**Instantaneous Calibration Score**:
-After each question, calculate running metrics:
-- Bucket answers by confidence level (rounded to nearest 5% or 10%)
-- For each bucket: Expected accuracy vs Actual accuracy
-- Calibration error: |Expected - Actual|
-- Overall calibration score: weighted average of calibration errors
-
-**Time-Series & Recency Weighting**:
-- Store all historical answers with timestamps
-- Display calibration score over time (e.g., line chart or sparkline)
-- **Recency weighting** (optional for MVP, consider for polish):
-  - Recent answers weighted more heavily in score calculation
-  - Simple approach: Exponential moving average with decay factor (e.g., 0.9)
-  - Alternative: Rolling window (e.g., last 20 answers)
-- Shows if user is improving calibration over time
-
-**Display Components**:
-1. **Current Answer Feedback**: "Correct!" or "Incorrect - answer was X"
-2. **Instantaneous Score**: Current overall calibration score
-3. **Mini Chart**: Small time-series showing score trend
-4. **Summary Stats**:
-   - Total questions answered
-   - Per-confidence-level breakdown (e.g., "At 80% confidence: 12/15 correct = 80%" - perfect!)
-   - Overall indicator: "Overconfident" / "Well-calibrated" / "Underconfident"
-
-### UI/UX Design Decisions
-
-**Question Input**:
-- Text inputs for low/high bounds (with number validation)
-- **Slider for confidence level** (0-100%, or perhaps 50-99% to avoid extremes)
-  - Shows percentage as user drags
-  - Allows sophisticated users full control over confidence expression
-
-**Game Flow (One Question at a Time)**:
-1. **First visit**: Brief instructions overlay or welcome modal
-2. **Question Display**: Show one question with input form
-3. **User Input**: Range (low/high) + confidence slider
-4. **Submit Answer**
-5. **Immediate Feedback Screen**:
-   - Reveal correct answer
-   - Show if user's range captured it (✓ or ✗)
-   - Update and display calibration stats:
-     - Current overall calibration score
-     - Mini time-series chart showing trend
-     - Summary stats (total Qs, breakdown by confidence level)
-6. **"Next Question" button**: User decides whether to continue or stop
-7. **No enforced session length**: Users play as long as they want
-
-**Persistent Stats Display**:
-- Always visible (sidebar or top bar):
-  - Total questions answered
-  - Current calibration score
-  - Mini chart showing recent performance
-- Updates after each question
-
-**Future Enhancement (Post-MVP)**:
-- **History View**: Separate page/modal where users can browse all past answers, filter by category, see which questions they got wrong, etc.
-
-## Technical Implementation Structure
-
-### File Organization
-```
-confidence/
-├── index.html           # Main HTML page
-├── styles/
-│   └── main.css        # All styles
-├── js/
-│   ├── main.js         # Entry point, initialization
-│   ├── game.js         # Game state and logic
-│   ├── storage.js      # localStorage interface
-│   ├── scoring.js      # Calibration calculations
-│   ├── ui.js           # DOM manipulation, rendering
-│   └── chart.js        # Time-series visualization
-└── data/
-    └── questions.json  # Static question bank
-```
-
-### Module Interfaces
-
-**game.js** - Core game logic
+**Frontend change is minimal:**
 ```javascript
-// State management
-- getCurrentQuestion()
-- submitAnswer(low, high, confidence)
-- getNextQuestion()
-- getGameState()
+// Before: load static JSON directly
+const questions = await fetch('data/questions.json').then(r => r.json());
+const question = questions[randomIndex];
+
+// After: call the API
+const question = await fetch('/api/next-question').then(r => r.json());
 ```
 
-**storage.js** - Data persistence
-```javascript
-- saveAnswer(answer)
-- loadHistory()
-- getQuestionPool()
-- markQuestionSeen(questionId)
+Question object shape stays the same (`id`, `question`, `answer`, `unit`, `category`) so the rest of the game is untouched.
+
+### Phasing
+
+**Phase A — Wire up the API pattern (no AI yet)**
+- Move hosting to Vercel (handles static site + API routes in one place)
+- Create `/api/next-question` serverless function that serves from existing `questions.json`
+- Update frontend to call the API
+- Everything works exactly as before, but the seam is in place
+- AI API key can be added to Vercel env vars at any time
+
+**Phase B — Add AI generation**
+- Batch-generate questions on first request (or on a cron schedule)
+- Cache generated questions (Vercel KV or in-memory)
+- Serve from the pool — don't generate per-request (slow + expensive)
+- Replenish pool when it runs low
+
+**Phase C — Polish**
+- Mix static seed questions with AI-generated ones
+- Category-aware generation (enforce diversity, prevent drift)
+- Validation strategy for generated questions (see below)
+
+### AI Question Generation — Design Considerations
+
+**What makes a good estimation question?**
+- Single, verifiable numerical answer
+- Interesting / surprising answer
+- Covers a range of magnitudes and domains
+- Not trivially Googleable mid-game
+
+**Validation is the hard part.** If Claude generates a question with an answer, how do we know it's right? Options (roughly in order of preference):
+1. Ask the model twice independently, flag disagreements
+2. Stick to well-known factual domains where the model is reliable
+3. Human review queue for flagged questions
+4. Trust the AI and rely on user reporting to catch errors
+
+**Duplicate prevention:**
+- Provide recent questions in the prompt as negative examples
+- Hash exact question text to catch perfect duplicates
+- Semantic similarity check (embeddings) to catch near-duplicates
+
+**Cost control:**
+- Batch generation (20 questions per API call, not 1)
+- Generated questions are reused across all users
+- Cache aggressively, only regenerate when pool is low
+
+### Hosting: Vercel
+
+Vercel is the right home for this project at this stage:
+- Deploys from GitHub (like GitHub Pages, but with API routes)
+- Serverless functions are first-class — `/api/next-question` is just a file in an `api/` directory
+- Environment variables for secrets (AI API key)
+- Free tier covers early usage; Pro is $20/mo if needed
+- Cron jobs available for periodic tasks (question refresh)
+
+No need for AWS, GCP, or a persistent backend service at this stage.
+
+---
+
+## Phase 2: User Persistence & Auth
+
+Once question generation is working, the next meaningful step is moving user data out of localStorage.
+
+### Stack Addition: Supabase
+
+Supabase covers almost everything:
+- **PostgreSQL** database for questions, users, and responses
+- **Built-in REST API** — CRUD on tables with no backend code
+- **Built-in Auth** — social login, email/password, row-level security
+- Free tier: 500MB storage, 2GB bandwidth
+
+### What Changes
+
+- User responses stored in Supabase instead of localStorage
+- Per-user history synced to cloud
+- Precision Score and Over/Under Confidence calculated server-side (or client-side from synced history)
+- Questions table replaces `questions.json` — same data, queryable
+
+### Migration
+
+localStorage data can be migrated on first login: read from localStorage, POST to Supabase, clear localStorage.
+
+---
+
+## Phase 3: Multi-User Platform
+
+Further out. The existing PLAN had detailed schemas and generation strategies here — the key ideas are preserved below.
+
+### Question Lifecycle
+
+```
+AI generates → "trial" status → served to users → metrics collected
+    → after N responses: promote to "active" if quality OK, retire if not
+    → time-sensitive questions flagged with expiry dates
+    → user reports increment a counter; auto-retire after threshold
 ```
 
-**scoring.js** - Calibration calculations
-```javascript
-- calculateCalibration(history)
-- getCalibrationByConfidenceLevel(history)
-- getRecentCalibration(history, windowSize)
-- isAnswerCorrect(userLow, userHigh, correctAnswer)
+### Question DB Schema (target)
+
+```
+id, question, answer, unit, category, difficulty,
+source, createdAt, lastVerified, generationModel,
+timesShown, avgScore, reportCount, status, expiresAt
 ```
 
-**ui.js** - Rendering
-```javascript
-- renderQuestion(question)
-- renderFeedback(answer, isCorrect, stats)
-- renderStats(calibrationData)
-- updateChart(history)
+### Responses DB Schema (target)
+
+```
+id, userId, questionId,
+userLow, userHigh, confidence, correctAnswer, isCorrect,
+logScore, precisionScore, confidenceBiasScore,
+answeredAt, responseTimeMs
 ```
 
-**chart.js** - Visualization
-```javascript
-- createTimeSeriesChart(history)
-- updateChartData(newDataPoint)
-```
+### Periodic Services
 
-This modular structure means:
-- Each module has a single responsibility
-- Clear interfaces make testing easier
-- Can be easily wrapped in React components later
-- No tight coupling to specific DOM elements
+- Question pool health check (replenish if low)
+- Time-sensitive question expiry review
+- Quality metrics recalculation
+- These can run as Vercel Cron Jobs or a lightweight Railway worker
 
-## Question Set for MVP
+---
 
-**Approach**: Manually curate 30-50 questions covering diverse domains
+## Open Questions
 
-**Categories to include**:
-- Geography (populations, distances, areas)
-- History (dates, numbers from historical events)
-- Science (measurements, constants, quantities)
-- World records and statistics
-- Astronomy and space
-- Economics and demographics
+1. **Which AI model for generation?** Claude (more careful, better at following constraints) vs GPT-4 (larger ecosystem, potentially cheaper at scale)?
+2. **Validation strategy?** How much do we trust AI-generated answers? What's the user reporting flow?
+3. **Question difficulty?** Do we want adaptive difficulty, or just a random mix? Could be interesting to track per-category difficulty from response data.
+4. **Monetization?** Not a priority now, but worth keeping in mind — freemium, ads, or "pay for unlimited questions"?
+5. **Multi-language?** Punt for now, but Supabase + serverless makes i18n relatively straightforward later.
 
-**Selection criteria**:
-- Answer must be a specific number
-- Answer must be verifiable from reliable sources
-- Questions should vary in difficulty
-- Avoid questions that are too easy or too obscure
-
-**Example questions**:
-- "What is the height of Mount Everest in meters?"
-- "In what year was the Battle of Hastings fought?"
-- "What is the population of Tokyo?"
-- "How many bones are in the adult human body?"
-- "What is the speed of light in km/s?"
-
-## Phase 2: Enhancements (Future)
-
-### Backend & Persistence
-- Set up simple backend (Node.js/Express or serverless functions)
-- User authentication (email/password or OAuth)
-- PostgreSQL or MongoDB for storing user history
-- API endpoints for questions and score tracking
-
-### AI-Generated Questions
-- Integration with LLM API (OpenAI GPT-4, Anthropic Claude, or similar)
-- Prompt engineering for diverse, interesting questions
-- Answer verification strategy:
-  - Model generates question + answer + source
-  - Manual review queue for new questions
-  - User reporting for incorrect answers
-- Rate limiting and cost management
-
-### Advanced Features
-- Question categories and filtering
-- Difficulty progression (adaptive game)
-- Multiplayer mode or challenges
-- Leaderboards
-- Calibration curve visualization (Expected vs Actual confidence)
-- Historical progress tracking over time
-- Question packs or themed sets
-- Social sharing of scores
-
-## Phase 3: Multi-User Platform with AI Question Generation
-
-### Architecture Overview
-
-**Two-Database System**:
-- **Questions Database**: Stores all questions (static + AI-generated)
-- **Answers Database**: Stores user responses with metadata
-
-### Question Database Schema
-
-```javascript
-{
-  id: "uuid",
-  question: "What is the population of Russia in millions?",
-  answer: 144,
-  unit: "million",
-  category: "demographics",
-  difficulty: "medium",  // estimated or calculated from response data
-
-  // Metadata
-  source: "UN 2023 estimates",  // or "AI-generated"
-  createdAt: timestamp,
-  lastVerified: timestamp,
-  generationModel: "claude-3-opus-20240229",  // if AI-generated
-  swVersion: "1.2.0",  // app version when created
-
-  // Quality metrics (calculated from answers)
-  timesShown: 145,
-  avgCalibrationScore: 67.3,
-  reportCount: 2,  // user reports of incorrect/confusing
-  status: "active",  // active | trial | retired
-
-  // For time-sensitive questions
-  expiresAt: timestamp,  // optional, for "current president" type questions
-  timeSensitive: boolean
-}
-```
-
-### Answer Database Schema
-
-```javascript
-{
-  id: "uuid",
-  userId: "user-uuid",
-  questionId: "question-uuid",
-
-  // Response data
-  userLow: 100,
-  userHigh: 200,
-  confidence: 80,
-  correctAnswer: 144,
-  isCorrect: true,
-
-  // Calculated scores
-  logScore: -3.2,
-  calibrationScore: 68.5,
-
-  // Metadata
-  answeredAt: timestamp,
-  responseTimeMs: 12500,  // time to answer
-  swVersion: "1.2.0"
-}
-```
-
-### Lazy Question Generation Strategy
-
-**Core Principle**: Don't generate questions until needed.
-
-**Algorithm**:
-1. User requests a question
-2. Query for unseen questions:
-   ```sql
-   SELECT * FROM questions
-   WHERE id NOT IN (
-     SELECT question_id FROM answers WHERE user_id = ?
-   )
-   AND status = 'active'
-   ORDER BY RANDOM()
-   LIMIT 1
-   ```
-3. If unseen questions exist (>= threshold, e.g., 10): serve random unseen question
-4. If unseen questions low (< 10): **trigger background generation** of new batch
-5. If no unseen questions: generate on-demand (rare for new users, common for power users)
-
-**Proactive Generation for Power Users**:
-- Monitor unseen question count per user
-- When count drops to 3: spawn background task to generate batch of 20
-- Generation happens async, doesn't block user experience
-- Questions enter "trial" status first
-
-### AI Question Generation
-
-**Generation Flow**:
-1. **Select example questions** (stratified sampling):
-   - Random sample across categories (2 history, 2 science, 2 geography, etc.)
-   - Include mix of difficulties
-   - Prefer questions from last 500 generated (recency) but enforce diversity
-   - Track category distribution to prevent drift
-
-2. **Prompt structure**:
-   ```
-   Generate a numerical estimation question similar to these examples:
-   [5-7 example questions with answers and sources]
-
-   Requirements:
-   - Must have a single numerical answer
-   - Must be verifiable from reliable sources
-   - Provide the source for verification
-   - Vary difficulty and category from examples
-   - Avoid duplicates or very similar questions
-
-   Return: question text, numerical answer, unit, category, source
-   ```
-
-3. **Duplicate prevention**:
-   - **Before generation**: Provide last 50 questions to AI in prompt
-   - **After generation**:
-     - Hash exact question text (catch perfect duplicates)
-     - Semantic similarity check using embeddings (catch near-duplicates)
-     - Threshold: cosine similarity < 0.85
-   - **Human review queue**: Questions with similarity 0.75-0.85 flagged for review
-
-4. **Quality assurance**:
-   - New questions start in "trial" status
-   - After 20 responses: calculate quality metrics
-   - If avgCalibrationScore reasonable & reportCount < 2: promote to "active"
-   - If metrics poor: retire or flag for human review
-
-### Preventing Evolutionary Drift
-
-**Problem**: If we always sample recent questions as examples, categories/styles may drift over time.
-
-**Solutions**:
-1. **Stratified sampling**: Always pull examples from each category
-2. **Anchor questions**: Maintain set of 20 "canonical" questions that are always included in example pool
-3. **Diversity metrics**: Track category/difficulty distribution over time
-   - Alert if new questions skew heavily toward one category
-   - Dashboard showing generation trends
-4. **Periodic human review**: Random sample of AI-generated questions reviewed monthly
-
-### Handling Stale Questions
-
-**Time-sensitive questions** (populations, "current president", records):
-- Flag with `timeSensitive: true` and `expiresAt: timestamp`
-- Cron job checks expired questions monthly
-- Expired questions moved to "needs_review" queue
-- Human reviewer updates answer or retires question
-
-**Quality-based retirement**:
-- If `reportCount > 5` or `avgCalibrationScore < 30`: flag for review
-- Questions with consistently poor metrics retired from active pool
-
-### Cost Control & Rate Limiting
-
-**AI Generation limits**:
-- Max 100 questions generated per hour (global)
-- Max 20 questions per user per day
-- Cache generated questions aggressively
-- Monitor costs with alerts
-
-**Optimization**:
-- Batch generation: Generate 20 at once (1 API call vs 20)
-- Reuse across users: One power user's generation helps all users
-- Fallback: If quota exceeded, serve questions other users haven't seen
-
-### User Reporting & Feedback
-
-**Report types**:
-- "Answer is incorrect"
-- "Question is confusing"
-- "Duplicate question"
-
-**Handling**:
-- Increment `reportCount` on question
-- After 3 reports: auto-flag for human review
-- After 10 reports: auto-retire (extreme cases)
-- Reviewers can edit answer, retire, or mark as "reviewed_ok"
-
-### Question Quality Scoring
-
-Track per-question metrics:
-- **Completion rate**: % of users who answer (vs skip)
-- **Avg calibration score**: Are users well-calibrated on this Q?
-- **Avg confidence**: Do users feel certain or uncertain?
-- **Report rate**: Reports per 100 views
-
-Use metrics to:
-- Identify and retire bad questions
-- Tune difficulty estimates
-- Improve AI generation prompts
-
-### Migration Path from Phase 2
-
-**Phase 2** → **Phase 3**:
-1. Set up databases (Questions, Answers, Users)
-2. Migrate existing static questions to Questions DB
-3. Implement lazy loading (serve from DB instead of JSON file)
-4. Add AI generation endpoint (manual trigger at first)
-5. Implement proactive generation for power users
-6. Add quality scoring and retirement logic
-7. Build admin dashboard for question review
-
-### Open Questions
-
-1. **Which AI model?** Claude (more careful) vs GPT-4 (faster/cheaper)?
-2. **Similarity threshold?** 0.85 too strict? Too lenient?
-3. **Trial period?** 20 responses enough to judge quality?
-4. **Human review cadence?** Weekly? Monthly? Trigger-based only?
-5. **Question expiry?** Auto-expire time-sensitive Qs or manual review?
-
-## Design Decisions Made ✓
-
-### Core Mechanics
-1. **Question count per session**: ✓ One question at a time, user decides when to stop
-2. **Confidence level input**: ✓ Slider (free-form 0-100% or 50-99%)
-3. **Feedback timing**: ✓ Immediate after each question
-4. **Score tracking**: ✓ Continuous, with time-series visualization and recency weighting (optional)
-5. **Tech stack**: ✓ Vanilla JS with modular structure for future framework migration
-
-### Still To Decide
-1. **Styling**: Minimal/clean, or more game-like with animations?
-2. **Question ordering**: Random? Sequential? Category-based selection?
-3. **Question reuse**: Track which questions user has seen, avoid immediate repeats?
-4. **Confidence range**: Allow 0-100% or restrict to 50-99% (since <50% doesn't make sense for a range estimate)?
-5. **Chart library**: Use a simple library (Chart.js, Recharts) or build custom SVG/Canvas visualization?
-
-### For Phase 2
-1. **Monetization**: Free? Freemium? Ads?
-2. **AI question generation**: Which API to use? Cost per question?
-3. **Moderation**: How to handle inappropriate or incorrect AI-generated questions?
-4. **Multi-language support**: Worth considering from the start?
-
-## Development Approach
-
-### Step 1: Prototype (Week 1)
-- Create basic HTML/CSS/JS structure
-- Build question display and input form
-- Implement basic game flow (1 question → answer → next)
-- Hardcode 5 test questions
-
-### Step 2: Core MVP (Week 2)
-- Curate full question set (30-50 questions)
-- Implement localStorage persistence
-- Build calibration scoring algorithm
-- Create end-of-game summary screen
-- Add basic styling
-
-### Step 3: Polish MVP (Week 3)
-- Improve UI/UX
-- Add instructions and help text
-- Test across browsers
-- Handle edge cases (invalid input, etc.)
-- Deploy to GitHub Pages or similar
-
-### Step 4: User Testing
-- Share with friends/colleagues
-- Gather feedback on:
-  - Question quality and variety
-  - UI/UX clarity
-  - Scoring understandability
-  - Game length and difficulty
-
-### Step 5: Iterate
-- Refine based on feedback
-- Consider Phase 2 features based on user interest
-
-## Success Metrics
-
-**MVP Success**:
-- Users can complete a full game session
-- Calibration scoring is accurate and understandable
-- Users find the questions interesting and varied
-- Technical implementation is clean and maintainable
-
-**Long-term Success**:
-- Users return for multiple sessions
-- Users improve their calibration over time
-- Users share the game with others
-- Positive feedback on educational value
+---
 
 ## Technical Risks & Mitigations
 
 | Risk | Mitigation |
 |------|-----------|
-| Question quality varies | Manual curation for MVP, editorial review process |
-| Answers may be disputed | Include sources in question data, allow user feedback |
-| localStorage can be cleared | Accept for MVP, add accounts in Phase 2 |
-| Browser compatibility | Test on major browsers, use standard APIs only |
-| Users game the system | Not a concern for MVP (educational, not competitive) |
-
-## Next Steps
-
-1. Review and refine this plan
-2. Make decisions on open questions (game length, confidence input, etc.)
-3. Set up project structure (HTML/CSS/JS files)
-4. Start with Step 1: Build basic prototype
-5. Curate initial question set
+| AI generates wrong answers | Dual-generation check + user reporting + human review queue |
+| Question pool runs dry | Batch generation triggered when pool < threshold |
+| localStorage data lost | Accept for now; cloud sync in Phase 2 handles long-term |
+| Vercel cold starts slow | Serverless functions warm up fast; cache questions in memory |
+| Cost of AI generation | Batch generation + aggressive caching + reuse across users |
