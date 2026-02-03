@@ -3,56 +3,42 @@
  */
 
 const Game = {
-  questions: [],
   currentQuestion: null,
   seenQuestions: [],
 
   /**
    * Initialize the game
    */
-  async init() {
-    await this.loadQuestions();
+  init() {
     this.seenQuestions = Storage.getSeenQuestions();
   },
 
   /**
-   * Load questions from JSON file
+   * Fetch the next question from the API.
+   * Sends seen IDs so the server can avoid repeats.
    */
-  async loadQuestions() {
+  async getNextQuestion() {
     try {
-      const response = await fetch('data/questions.json');
-      this.questions = await response.json();
+      const params = this.seenQuestions.length > 0
+        ? '?seen=' + this.seenQuestions.join(',')
+        : '';
+      const response = await fetch('/api/next-question' + params);
+      if (!response.ok) throw new Error('API returned ' + response.status);
+
+      const data = await response.json();
+
+      // Server signals pool exhaustion — clear seen list for next round
+      if (data.poolReset) {
+        this.seenQuestions = [];
+        Storage.clearSeenQuestions();
+      }
+
+      this.currentQuestion = data.question;
+      return this.currentQuestion;
     } catch (error) {
-      console.error('Failed to load questions:', error);
-      this.questions = [];
+      console.error('Failed to fetch question:', error);
+      return null;
     }
-  },
-
-  /**
-   * Get a random question (prefer unseen ones)
-   */
-  getNextQuestion() {
-    if (this.questions.length === 0) return null;
-
-    // Get unseen questions
-    const unseenQuestions = this.questions.filter(
-      q => !this.seenQuestions.includes(q.id)
-    );
-
-    // If all questions seen, reset and start over
-    let availableQuestions = unseenQuestions.length > 0 ? unseenQuestions : this.questions;
-
-    // Pick random question
-    const randomIndex = Math.floor(Math.random() * availableQuestions.length);
-    this.currentQuestion = availableQuestions[randomIndex];
-
-    // If we're resetting (all seen), clear seen list
-    if (unseenQuestions.length === 0) {
-      this.seenQuestions = [];
-      Storage.clearHistory(); // Optional: could keep history but reset seen
-    }
-
-    return this.currentQuestion;
   },
 
   /**
@@ -92,8 +78,7 @@ const Game = {
 
     return {
       history: history,
-      metrics: metrics,
-      questionsRemaining: this.questions.length - this.seenQuestions.length
+      metrics: metrics
     };
   },
 

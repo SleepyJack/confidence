@@ -1,72 +1,84 @@
 # Deployment Instructions
 
-## GitHub Pages Setup
+## Hosting: Vercel (Required)
 
-The MVP is ready to deploy! Follow these steps to make the game live on GitHub Pages:
+The app now uses a serverless API route (`/api/next-question`), so it must be hosted on Vercel (or another platform that supports serverless functions). GitHub Pages won't work — it only serves static files.
 
-### Option 1: Deploy from feature branch (Quickest)
+### Deploy to Vercel
 
-1. Go to your repository settings on GitHub
-2. Navigate to **Settings** → **Pages**
-3. Under "Source", select the branch: `claude/estimation-game-setup-BGfzB`
-4. Leave the folder as `/ (root)`
-5. Click **Save**
-6. GitHub will deploy the site (takes ~1-2 minutes)
-7. Your game will be live at: `https://sleepyjack.github.io/confidence/`
+1. Go to [vercel.com](https://vercel.com) and sign in (free account is fine)
+2. Click **New Project** → **Import Git Repository**
+3. Connect your GitHub account and select the `confidence` repo
+4. Select the branch you want to deploy (e.g. `main`)
+5. Leave all default settings — Vercel auto-detects the `api/` directory
+6. Click **Deploy**
+7. Your game is live at the URL Vercel assigns (e.g. `https://confidence-xyz.vercel.app`)
 
-### Option 2: Merge to main first (Recommended for production)
+### Redeploy on Push
 
-1. Create a pull request from `claude/estimation-game-setup-BGfzB` to `main`
-2. Review and merge the PR
-3. Go to repository **Settings** → **Pages**
-4. Select branch: `main`
-5. Click **Save**
-6. Site will be live at: `https://sleepyjack.github.io/confidence/`
+Once connected, Vercel auto-deploys on every push to the selected branch. No action needed.
 
-## Verification
+### Environment Variables
 
-Once deployed, test the following:
-- [ ] Welcome modal appears on first visit
-- [ ] Questions load properly
-- [ ] Range inputs accept numbers
-- [ ] Confidence slider works (50-99%)
-- [ ] Submit answer shows feedback correctly
-- [ ] Stats update after each question
-- [ ] Chart renders after 3+ questions
-- [ ] Calibration breakdown table displays
-- [ ] Next question button loads a new question
-- [ ] Progress persists on page reload (localStorage)
+No env vars are required for Phase A (static questions only). When AI generation is added later, add the API key here:
 
-## Quick Test Locally (Optional)
+1. Go to your Vercel project → **Settings** → **Environment Variables**
+2. Add `ANTHROPIC_API_KEY` with your key value
+3. Redeploy (or it picks up on next push)
 
-If you want to test before deploying:
+---
+
+## Local Development
+
+The API route needs a serverless runtime to work. Use Vercel's CLI:
 
 ```bash
-# Using Python 3
-python3 -m http.server 8000
+# Install Vercel CLI (once)
+npm install -g vercel
 
-# Then open: http://localhost:8000
+# Run locally — serves static files AND API routes
+vercel dev
+
+# Opens at http://localhost:3000
 ```
 
-Or use any static file server.
+Alternatively, if you just want to test the static site without the API (questions won't load):
+
+```bash
+python3 -m http.server 8000
+# http://localhost:8000
+```
+
+---
+
+## Verification Checklist
+
+Once deployed, test:
+
+- [ ] Welcome modal appears on first visit
+- [ ] Questions load from `/api/next-question`
+- [ ] Range inputs accept numbers
+- [ ] Confidence slider works (50-99%)
+- [ ] Submit answer shows feedback + bell curve
+- [ ] Stats update after each question
+- [ ] Charts render after 3+ questions
+- [ ] Next question button loads a new question
+- [ ] Questions don't repeat until all 45 have been seen
+- [ ] Progress persists on page reload (localStorage)
+- [ ] Browser network tab shows GET `/api/next-question` requests
+
+---
 
 ## Troubleshooting
 
-**Issue**: Questions don't load
-- **Fix**: Ensure `data/questions.json` is committed and accessible
+**Issue**: Questions don't load / blank page
+- **Fix**: Ensure you're on Vercel (not GitHub Pages). Check browser console for network errors.
+
+**Issue**: `GET /api/next-question` returns 404
+- **Fix**: Verify `api/next-question.js` is committed and pushed. Vercel needs it in the repo root.
 
 **Issue**: Chart doesn't display
-- **Fix**: Answer at least 3 questions (chart needs minimum data)
+- **Fix**: Answer at least 3 questions (charts need minimum data)
 
 **Issue**: Stats don't persist
 - **Fix**: Check browser localStorage is enabled (not in private/incognito mode)
-
-## Next Steps After Deployment
-
-1. Play the game yourself and note any issues
-2. Share with friends for feedback
-3. Consider Phase 2 enhancements:
-   - User accounts and database
-   - AI-generated questions
-   - Additional visualizations
-   - Mobile app version

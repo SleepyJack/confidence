@@ -89,16 +89,16 @@ const UI = {
   /**
    * Hide welcome modal and start game
    */
-  handleStart() {
+  async handleStart() {
     this.elements.welcomeModal.classList.remove('active');
-    this.loadNewQuestion();
+    await this.loadNewQuestion();
   },
 
   /**
    * Load and display a new question
    */
-  loadNewQuestion() {
-    const question = Game.getNextQuestion();
+  async loadNewQuestion() {
+    const question = await Game.getNextQuestion();
     if (!question) {
       this.showError('Failed to load questions');
       return;
@@ -234,8 +234,8 @@ const UI = {
   /**
    * Handle next question button
    */
-  handleNext() {
-    this.loadNewQuestion();
+  async handleNext() {
+    await this.loadNewQuestion();
   },
 
   /**

@@ -10,8 +10,8 @@ const VERSION = {
 
 async function initApp() {
   try {
-    // Initialize game
-    await Game.init();
+    // Initialize game (loads seen-questions from localStorage)
+    Game.init();
 
     // Initialize UI
     UI.init();

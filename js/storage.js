@@ -37,6 +37,13 @@ const Storage = {
   },
 
   /**
+   * Clear only the seen-questions list (keeps answer history)
+   */
+  clearSeenQuestions() {
+    localStorage.removeItem(this.KEYS.SEEN_QUESTIONS);
+  },
+
+  /**
    * Mark a question as seen
    */
   markQuestionSeen(questionId) {
