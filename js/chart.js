@@ -50,7 +50,7 @@ const Chart = {
   },
 
   /**
-   * Draw score time-series chart
+   * Draw score time-series chart with raw scatter + EMA line
    */
   _drawScore(history) {
     if (!this.scoreCanvas || history.length < 1) {
@@ -65,7 +65,8 @@ const Chart = {
     }
 
     const labels = timeSeriesData.map((_, i) => i + 1);
-    const scores = timeSeriesData.map(p => p.score);
+    const rawScores = timeSeriesData.map(p => p.score);
+    const emaScores = timeSeriesData.map(p => p.scoreEMA);
 
     const ctx = this.scoreCanvas.getContext('2d');
     const lineGrad = ctx.createLinearGradient(0, 0, this.scoreCanvas.width, 0);
@@ -82,19 +83,37 @@ const Chart = {
       type: 'line',
       data: {
         labels: labels,
-        datasets: [{
-          data: scores,
-          borderColor: lineGrad,
-          backgroundColor: fillGrad,
-          borderWidth: 2,
-          pointBackgroundColor: '#e2a84b',
-          pointBorderColor: '#181a20',
-          pointBorderWidth: 2,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          fill: true,
-          tension: 0.35,
-        }]
+        datasets: [
+          // EMA line (drawn first, behind scatter)
+          {
+            label: 'Smoothed',
+            data: emaScores,
+            borderColor: lineGrad,
+            backgroundColor: fillGrad,
+            borderWidth: 2,
+            pointRadius: 0, // No points on line
+            pointHoverRadius: 0,
+            fill: true,
+            tension: 0.35,
+            order: 2 // Draw behind
+          },
+          // Raw scatter points (drawn second, on top)
+          {
+            label: 'Raw',
+            data: rawScores,
+            borderColor: 'transparent',
+            backgroundColor: 'transparent',
+            pointBackgroundColor: 'rgba(226, 168, 75, 0.5)',
+            pointBorderColor: '#e2a84b',
+            pointBorderWidth: 1,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: '#e2a84b',
+            pointHoverBorderWidth: 2,
+            showLine: false, // Scatter only
+            order: 1 // Draw on top
+          }
+        ]
       },
       options: {
         responsive: true,
@@ -105,7 +124,13 @@ const Chart = {
             ...this._tooltipConfig(),
             callbacks: {
               title: (items) => 'Question ' + items[0].label,
-              label: (ctx) => 'Score: ' + ctx.parsed.y.toFixed(1) + '%'
+              label: (ctx) => {
+                if (ctx.datasetIndex === 0) {
+                  return 'Smoothed: ' + ctx.parsed.y.toFixed(1) + '%';
+                } else {
+                  return 'Raw: ' + ctx.parsed.y.toFixed(1) + '%';
+                }
+              }
             }
           }
         },
@@ -130,7 +155,7 @@ const Chart = {
   },
 
   /**
-   * Draw confidence bias time-series chart
+   * Draw confidence bias time-series chart with raw scatter + EMA line
    */
   _drawConfidenceBias(history) {
     if (!this.confidenceBiasCanvas || history.length < 1) {
@@ -145,12 +170,18 @@ const Chart = {
     }
 
     const labels = biasData.map((_, i) => i + 1);
-    const biases = biasData.map(p => p.confidenceBias);
+    const rawBiases = biasData.map(p => p.confidenceBias);
+    const emaBiases = biasData.map(p => p.confidenceBiasEMA);
 
     const ctx = this.confidenceBiasCanvas.getContext('2d');
 
-    // Color points by bias direction
-    const pointColors = biases.map(b => {
+    // Color raw points by bias direction
+    const pointColors = rawBiases.map(b => {
+      if (Math.abs(b) < 5) return 'rgba(74, 222, 128, 0.5)';
+      return b > 0 ? 'rgba(96, 165, 250, 0.5)' : 'rgba(248, 113, 113, 0.5)';
+    });
+
+    const pointBorderColors = rawBiases.map(b => {
       if (Math.abs(b) < 5) return '#4ade80';
       return b > 0 ? '#60a5fa' : '#f87171';
     });
@@ -161,18 +192,35 @@ const Chart = {
       type: 'line',
       data: {
         labels: labels,
-        datasets: [{
-          data: biases,
-          borderColor: '#9a9590',
-          borderWidth: 2,
-          pointBackgroundColor: pointColors,
-          pointBorderColor: '#181a20',
-          pointBorderWidth: 2,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          fill: false,
-          tension: 0.35,
-        }]
+        datasets: [
+          // EMA line (drawn first, behind scatter)
+          {
+            label: 'Smoothed',
+            data: emaBiases,
+            borderColor: '#9a9590',
+            borderWidth: 2,
+            pointRadius: 0, // No points on line
+            pointHoverRadius: 0,
+            fill: false,
+            tension: 0.35,
+            order: 2 // Draw behind
+          },
+          // Raw scatter points (drawn second, on top)
+          {
+            label: 'Raw',
+            data: rawBiases,
+            borderColor: 'transparent',
+            backgroundColor: 'transparent',
+            pointBackgroundColor: pointColors,
+            pointBorderColor: pointBorderColors,
+            pointBorderWidth: 1,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            pointHoverBorderWidth: 2,
+            showLine: false, // Scatter only
+            order: 1 // Draw on top
+          }
+        ]
       },
       options: {
         responsive: true,
@@ -186,7 +234,8 @@ const Chart = {
               label: (ctx) => {
                 const v = ctx.parsed.y;
                 const sign = v >= 0 ? '+' : '';
-                return 'Bias: ' + sign + v.toFixed(1) + '%';
+                const label = ctx.datasetIndex === 0 ? 'Smoothed: ' : 'Raw: ';
+                return label + sign + v.toFixed(1);
               }
             }
           }

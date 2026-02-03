@@ -94,6 +94,8 @@ const Scoring = {
    * a single extreme outlier from dominating the average.
    */
   LOG_SCORE_FLOOR: -12,
+  EMA_ALPHA: 0.3, // 30% new value, 70% old value
+  PRECISION_INITIAL: 70, // Initial precision score (%)
 
   getAverageLogScore(history) {
     if (history.length === 0) return null;
@@ -109,6 +111,39 @@ const Scoring = {
     }, 0);
 
     return totalLogScore / history.length;
+  },
+
+  /**
+   * Calculate EMA (Exponential Moving Average) of precision scores
+   * Returns the smoothed score using EMA filter
+   */
+  getCalibrationScoreEMA(history) {
+    if (history.length === 0) return null;
+
+    let ema = null;
+
+    history.forEach((answer) => {
+      const logScore = Math.max(
+        this.calculateLogScore(
+          answer.userLow,
+          answer.userHigh,
+          answer.confidence,
+          answer.correctAnswer
+        ),
+        this.LOG_SCORE_FLOOR
+      );
+      const normalizedScore = this.normalizeLogScore(logScore);
+
+      if (ema === null) {
+        // Initialize with max of 70% or first score
+        ema = Math.max(this.PRECISION_INITIAL, normalizedScore);
+      } else {
+        // EMA formula: new = α × value + (1 - α) × old
+        ema = this.EMA_ALPHA * normalizedScore + (1 - this.EMA_ALPHA) * ema;
+      }
+    });
+
+    return ema;
   },
 
   /**
@@ -201,6 +236,24 @@ const Scoring = {
   },
 
   /**
+   * Calculate EMA of confidence bias scores
+   * Returns the smoothed bias using EMA filter, starting at 0
+   */
+  getConfidenceBiasScoreEMA(history) {
+    if (history.length === 0) return null;
+
+    let ema = 0; // Start at 0 (perfectly calibrated)
+
+    history.forEach((answer) => {
+      const score = this.calculateConfidenceBiasScore(answer.confidence, answer.isCorrect);
+      // EMA formula: new = α × value + (1 - α) × old
+      ema = this.EMA_ALPHA * score + (1 - this.EMA_ALPHA) * ema;
+    });
+
+    return ema;
+  },
+
+  /**
    * Determine calibration status based on bias
    */
   getCalibrationStatus(bias) {
@@ -217,6 +270,7 @@ const Scoring = {
 
   /**
    * Calculate all metrics at once
+   * Uses EMA for precision score and confidence bias score
    */
   calculateAllMetrics(history) {
     if (history.length === 0) {
@@ -233,12 +287,20 @@ const Scoring = {
     }
 
     const logScore = this.getAverageLogScore(history);
-    const calibrationScore = this.getCalibrationScore(history);
+    const calibrationScore = this.getCalibrationScoreEMA(history); // Use EMA
     const calibrationBias = this.getCalibrationBias(history);
-    const confidenceBiasScore = this.getConfidenceBiasScore(history);
+    const confidenceBiasScore = this.getConfidenceBiasScoreEMA(history); // Use EMA
     const actualAccuracy = this.getActualAccuracy(history);
     const averageConfidence = this.getAverageConfidence(history);
-    const status = this.getCalibrationStatus(calibrationBias);
+
+    // Status based on confidence bias score
+    let status = 'No data yet';
+    if (confidenceBiasScore !== null) {
+      const absBias = Math.abs(confidenceBiasScore);
+      if (absBias < 5) status = 'Well-calibrated';
+      else if (confidenceBiasScore > 0) status = 'Underconfident';
+      else status = 'Overconfident';
+    }
 
     return {
       calibrationScore: calibrationScore,
@@ -254,45 +316,62 @@ const Scoring = {
 
   /**
    * Get confidence bias data points for time-series chart
+   * Returns both raw scores and EMA smoothed values
    */
   getConfidenceBiasTimeSeriesData(history) {
     const data = [];
-    let runningHistory = [];
+    let ema = 0; // Start at 0
 
     history.forEach((answer, index) => {
-      runningHistory.push(answer);
-      const confidenceBias = this.getConfidenceBiasScore(runningHistory);
-      if (confidenceBias !== null) {
-        data.push({
-          questionNumber: index + 1,
-          confidenceBias: confidenceBias,
-          timestamp: answer.timestamp
-        });
-      }
+      const rawScore = this.calculateConfidenceBiasScore(answer.confidence, answer.isCorrect);
+
+      // Update EMA
+      ema = this.EMA_ALPHA * rawScore + (1 - this.EMA_ALPHA) * ema;
+
+      data.push({
+        questionNumber: index + 1,
+        confidenceBias: rawScore,      // Raw score for scatter
+        confidenceBiasEMA: ema,         // Smoothed for line
+        timestamp: answer.timestamp
+      });
     });
 
     return data;
   },
 
   /**
-   * Get data points for time-series chart (using Calibration Score)
+   * Get data points for time-series chart (Precision Score)
+   * Returns both raw scores and EMA smoothed values
    */
   getTimeSeriesData(history) {
     const data = [];
-    let runningHistory = [];
+    let ema = null;
 
     history.forEach((answer, index) => {
-      runningHistory.push(answer);
+      const logScore = Math.max(
+        this.calculateLogScore(
+          answer.userLow,
+          answer.userHigh,
+          answer.confidence,
+          answer.correctAnswer
+        ),
+        this.LOG_SCORE_FLOOR
+      );
+      const rawScore = this.normalizeLogScore(logScore);
 
-      // Calculate calibration score at this point
-      if (runningHistory.length >= 1) {
-        const calibrationScore = this.getCalibrationScore(runningHistory);
-        data.push({
-          questionNumber: index + 1,
-          score: calibrationScore,
-          timestamp: answer.timestamp
-        });
+      // Update EMA
+      if (ema === null) {
+        ema = Math.max(this.PRECISION_INITIAL, rawScore);
+      } else {
+        ema = this.EMA_ALPHA * rawScore + (1 - this.EMA_ALPHA) * ema;
       }
+
+      data.push({
+        questionNumber: index + 1,
+        score: rawScore,      // Raw score for scatter
+        scoreEMA: ema,        // Smoothed for line
+        timestamp: answer.timestamp
+      });
     });
 
     return data;
