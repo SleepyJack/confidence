@@ -167,6 +167,36 @@ const Scoring = {
   },
 
   /**
+   * Calculate confidence bias score for a single answer
+   * Formula: Right: (100 - confidence), Wrong: -confidence
+   * This averages to 0 for perfectly calibrated users
+   * Positive = underconfident (playing it safe)
+   * Negative = overconfident (being too bold)
+   */
+  calculateConfidenceBiasScore(confidence, isCorrect) {
+    if (isCorrect) {
+      return 100 - confidence;
+    } else {
+      return -confidence;
+    }
+  },
+
+  /**
+   * Calculate average confidence bias score across all answers
+   * Averages to 0 for perfectly calibrated users
+   * Positive = underconfident, Negative = overconfident
+   */
+  getConfidenceBiasScore(history) {
+    if (history.length === 0) return null;
+
+    const totalScore = history.reduce((sum, answer) => {
+      return sum + this.calculateConfidenceBiasScore(answer.confidence, answer.isCorrect);
+    }, 0);
+
+    return totalScore / history.length;
+  },
+
+  /**
    * Determine calibration status based on bias
    */
   getCalibrationStatus(bias) {
@@ -190,6 +220,7 @@ const Scoring = {
         calibrationScore: null,
         logScore: null,
         calibrationBias: null,
+        confidenceBiasScore: null,
         actualAccuracy: null,
         averageConfidence: null,
         status: 'No data yet',
@@ -200,6 +231,7 @@ const Scoring = {
     const logScore = this.getAverageLogScore(history);
     const calibrationScore = this.getCalibrationScore(history);
     const calibrationBias = this.getCalibrationBias(history);
+    const confidenceBiasScore = this.getConfidenceBiasScore(history);
     const actualAccuracy = this.getActualAccuracy(history);
     const averageConfidence = this.getAverageConfidence(history);
     const status = this.getCalibrationStatus(calibrationBias);
@@ -208,6 +240,7 @@ const Scoring = {
       calibrationScore: calibrationScore,
       logScore: logScore,
       calibrationBias: calibrationBias,
+      confidenceBiasScore: confidenceBiasScore,
       actualAccuracy: actualAccuracy,
       averageConfidence: averageConfidence,
       status: status,

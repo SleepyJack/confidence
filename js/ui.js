@@ -28,6 +28,8 @@ const UI = {
       statsScore: document.getElementById('stats-score'),
       statsBias: document.getElementById('stats-bias'),
       statsStatus: document.getElementById('stats-status'),
+      statsConfidenceBias: document.getElementById('stats-confidence-bias'),
+      statsConfidenceStatus: document.getElementById('stats-confidence-status'),
       statsAccuracy: document.getElementById('stats-accuracy'),
       statsAvgConfidence: document.getElementById('stats-avg-confidence'),
       chartCanvas: document.getElementById('chart-canvas'),
@@ -235,6 +237,28 @@ const UI = {
         this.elements.statsBias.className = 'bias-underconfident';
       }
 
+      // Confidence Bias Score (new metric)
+      const confBiasSign = m.confidenceBiasScore >= 0 ? '+' : '';
+      this.elements.statsConfidenceBias.textContent = confBiasSign + m.confidenceBiasScore.toFixed(1);
+
+      // Status for confidence bias
+      let confBiasStatus = '';
+      const absConfBias = Math.abs(m.confidenceBiasScore);
+      if (absConfBias < 5) {
+        confBiasStatus = 'Well-calibrated';
+        this.elements.statsConfidenceStatus.className = 'status-good';
+        this.elements.statsConfidenceBias.className = 'bias-good';
+      } else if (m.confidenceBiasScore > 0) {
+        confBiasStatus = 'Underconfident';
+        this.elements.statsConfidenceStatus.className = 'status-underconfident';
+        this.elements.statsConfidenceBias.className = 'bias-underconfident';
+      } else {
+        confBiasStatus = 'Overconfident';
+        this.elements.statsConfidenceStatus.className = 'status-overconfident';
+        this.elements.statsConfidenceBias.className = 'bias-overconfident';
+      }
+      this.elements.statsConfidenceStatus.textContent = confBiasStatus;
+
       // Secondary metrics (accuracy and avg confidence)
       this.elements.statsAccuracy.textContent = m.actualAccuracy.toFixed(0) + '%';
       this.elements.statsAvgConfidence.textContent = m.averageConfidence.toFixed(0) + '%';
@@ -247,6 +271,10 @@ const UI = {
       this.elements.statsStatus.textContent = 'No data yet';
       this.elements.statsStatus.className = '';
       this.elements.statsBias.className = '';
+      this.elements.statsConfidenceBias.textContent = '-';
+      this.elements.statsConfidenceStatus.textContent = 'No data yet';
+      this.elements.statsConfidenceStatus.className = '';
+      this.elements.statsConfidenceBias.className = '';
       this.elements.statsAccuracy.textContent = '-';
       this.elements.statsAvgConfidence.textContent = '-';
       Chart.drawEmpty();
