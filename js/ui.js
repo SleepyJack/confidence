@@ -12,6 +12,7 @@ const UI = {
   init() {
     this.elements = {
       questionText: document.getElementById('question-text'),
+      questionCategory: document.getElementById('question-category'),
       lowInput: document.getElementById('low-input'),
       highInput: document.getElementById('high-input'),
       confidenceSlider: document.getElementById('confidence-slider'),
@@ -23,8 +24,10 @@ const UI = {
       feedbackText: document.getElementById('feedback-text'),
       correctAnswer: document.getElementById('correct-answer'),
       questionScore: document.getElementById('question-score'),
+      validationMessage: document.getElementById('validation-message'),
       distributionCanvas: document.getElementById('distribution-canvas'),
       statsTotal: document.getElementById('stats-total'),
+      statsTotalLabel: document.getElementById('stats-total-label'),
       statsScore: document.getElementById('stats-score'),
       statsBias: document.getElementById('stats-bias'),
       statsStatus: document.getElementById('stats-status'),
@@ -33,13 +36,14 @@ const UI = {
       statsAccuracy: document.getElementById('stats-accuracy'),
       statsAvgConfidence: document.getElementById('stats-avg-confidence'),
       chartCanvas: document.getElementById('chart-canvas'),
+      biasChartCanvas: document.getElementById('bias-chart-canvas'),
       welcomeModal: document.getElementById('welcome-modal'),
       startBtn: document.getElementById('start-btn'),
       resetBtn: document.getElementById('reset-btn')
     };
 
     this.attachEventListeners();
-    Chart.init(this.elements.chartCanvas);
+    Chart.init(this.elements.chartCanvas, this.elements.biasChartCanvas);
     Distribution.init(this.elements.distributionCanvas);
 
     // Show welcome modal on first visit
@@ -104,13 +108,19 @@ const UI = {
 
     this.elements.questionText.textContent = question.question;
 
+    // Update category eyebrow
+    if (this.elements.questionCategory) {
+      this.elements.questionCategory.textContent = question.category || 'Question';
+    }
+
     // Reset inputs
     this.elements.lowInput.value = '';
     this.elements.highInput.value = '';
-    this.elements.confidenceSlider.value = 80;
-    this.elements.confidenceValue.textContent = '80%';
+    this.elements.confidenceSlider.value = 50;
+    this.elements.confidenceValue.textContent = '50%';
 
     // Show question, hide feedback
+    this.hideValidation();
     this.elements.questionContainer.classList.add('active');
     this.elements.feedbackContainer.classList.remove('active');
     this.elements.submitBtn.disabled = false;
@@ -123,6 +133,32 @@ const UI = {
   },
 
   /**
+   * Show inline validation error
+   */
+  showValidation(message) {
+    const el = this.elements.validationMessage;
+    el.textContent = message;
+    el.classList.remove('visible', 'shake');
+    // Force reflow so re-adding classes restarts animations
+    void el.offsetWidth;
+    el.classList.add('visible', 'shake');
+
+    // Auto-hide after a few seconds
+    clearTimeout(this._validationTimer);
+    this._validationTimer = setTimeout(() => {
+      el.classList.remove('visible');
+    }, 4000);
+  },
+
+  /**
+   * Hide inline validation error
+   */
+  hideValidation() {
+    this.elements.validationMessage.classList.remove('visible');
+    clearTimeout(this._validationTimer);
+  },
+
+  /**
    * Handle answer submission
    */
   handleSubmit() {
@@ -132,14 +168,16 @@ const UI = {
 
     // Validate inputs
     if (isNaN(low) || isNaN(high)) {
-      alert('Please enter valid numbers for both bounds');
+      this.showValidation('Enter a number for both bounds');
       return;
     }
 
     if (low >= high) {
-      alert('Low bound must be less than high bound');
+      this.showValidation('Low bound must be less than high bound');
       return;
     }
+
+    this.hideValidation();
 
     // Submit answer
     this.currentAnswer = Game.submitAnswer(low, high, confidence);
@@ -161,10 +199,10 @@ const UI = {
     // Display result
     const isCorrect = this.currentAnswer.isCorrect;
     this.elements.feedbackText.innerHTML = isCorrect
-      ? '✓ <strong>Correct!</strong> The answer was within your range.'
-      : '✗ <strong>Incorrect.</strong> The answer was outside your range.';
+      ? '<strong>Correct</strong> — The answer was within your range.'
+      : '<strong>Incorrect</strong> — The answer was outside your range.';
 
-    this.elements.feedbackText.className = isCorrect ? 'correct' : 'incorrect';
+    this.elements.feedbackText.className = 'feedback-message ' + (isCorrect ? 'correct' : 'incorrect');
 
     // Show correct answer
     const q = Game.currentQuestion;
@@ -181,7 +219,7 @@ const UI = {
     const normalizedScore = Scoring.normalizeLogScore(logScore);
 
     this.elements.questionScore.textContent =
-      `This answer scored: ${normalizedScore.toFixed(1)}% (log score: ${logScore.toFixed(2)})`;
+      `Score: ${normalizedScore.toFixed(1)}%  (log score: ${logScore.toFixed(2)})`;
 
     // Draw probability distribution visualization
     Distribution.draw(
@@ -211,6 +249,9 @@ const UI = {
 
     // Total questions
     this.elements.statsTotal.textContent = m.totalAnswered;
+    if (this.elements.statsTotalLabel) {
+      this.elements.statsTotalLabel.textContent = m.totalAnswered + ' answered';
+    }
 
     // Display metrics
     if (m.calibrationScore !== null) {
@@ -227,14 +268,14 @@ const UI = {
       // Status color based on bias
       const absBias = Math.abs(m.calibrationBias);
       if (absBias < 5) {
-        this.elements.statsStatus.className = 'status-good';
-        this.elements.statsBias.className = 'bias-good';
+        this.elements.statsStatus.className = 'metric-status status-good';
+        this.elements.statsBias.className = 'metric-value-medium bias-good';
       } else if (m.calibrationBias > 0) {
-        this.elements.statsStatus.className = 'status-overconfident';
-        this.elements.statsBias.className = 'bias-overconfident';
+        this.elements.statsStatus.className = 'metric-status status-overconfident';
+        this.elements.statsBias.className = 'metric-value-medium bias-overconfident';
       } else {
-        this.elements.statsStatus.className = 'status-underconfident';
-        this.elements.statsBias.className = 'bias-underconfident';
+        this.elements.statsStatus.className = 'metric-status status-underconfident';
+        this.elements.statsBias.className = 'metric-value-medium bias-underconfident';
       }
 
       // Confidence Bias Score (new metric)
@@ -246,16 +287,16 @@ const UI = {
       const absConfBias = Math.abs(m.confidenceBiasScore);
       if (absConfBias < 5) {
         confBiasStatus = 'Well-calibrated';
-        this.elements.statsConfidenceStatus.className = 'status-good';
-        this.elements.statsConfidenceBias.className = 'bias-good';
+        this.elements.statsConfidenceStatus.className = 'metric-status status-good';
+        this.elements.statsConfidenceBias.className = 'metric-value-medium bias-good';
       } else if (m.confidenceBiasScore > 0) {
         confBiasStatus = 'Underconfident';
-        this.elements.statsConfidenceStatus.className = 'status-underconfident';
-        this.elements.statsConfidenceBias.className = 'bias-underconfident';
+        this.elements.statsConfidenceStatus.className = 'metric-status status-underconfident';
+        this.elements.statsConfidenceBias.className = 'metric-value-medium bias-underconfident';
       } else {
         confBiasStatus = 'Overconfident';
-        this.elements.statsConfidenceStatus.className = 'status-overconfident';
-        this.elements.statsConfidenceBias.className = 'bias-overconfident';
+        this.elements.statsConfidenceStatus.className = 'metric-status status-overconfident';
+        this.elements.statsConfidenceBias.className = 'metric-value-medium bias-overconfident';
       }
       this.elements.statsConfidenceStatus.textContent = confBiasStatus;
 
@@ -266,17 +307,17 @@ const UI = {
       // Update chart
       Chart.draw(state.history);
     } else {
-      this.elements.statsScore.textContent = '-';
-      this.elements.statsBias.textContent = '-';
+      this.elements.statsScore.textContent = '\u2014';
+      this.elements.statsBias.textContent = '\u2014';
+      this.elements.statsBias.className = 'metric-value-medium';
       this.elements.statsStatus.textContent = 'No data yet';
-      this.elements.statsStatus.className = '';
-      this.elements.statsBias.className = '';
-      this.elements.statsConfidenceBias.textContent = '-';
+      this.elements.statsStatus.className = 'metric-status';
+      this.elements.statsConfidenceBias.textContent = '\u2014';
+      this.elements.statsConfidenceBias.className = 'metric-value-medium';
       this.elements.statsConfidenceStatus.textContent = 'No data yet';
-      this.elements.statsConfidenceStatus.className = '';
-      this.elements.statsConfidenceBias.className = '';
-      this.elements.statsAccuracy.textContent = '-';
-      this.elements.statsAvgConfidence.textContent = '-';
+      this.elements.statsConfidenceStatus.className = 'metric-status';
+      this.elements.statsAccuracy.textContent = '\u2014';
+      this.elements.statsAvgConfidence.textContent = '\u2014';
       Chart.drawEmpty();
     }
   },

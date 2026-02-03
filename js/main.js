@@ -4,8 +4,8 @@
 
 // Version info - update this with each deployment
 const VERSION = {
-  hash: '1f5d3b7',
-  date: '2025-01-XX' // Will show actual build date in production
+  hash: '8ceeda7',
+  date: '2026-XX-XX' // Will show actual build date in production
 };
 
 async function initApp() {

@@ -3,18 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confidence Calibration Game</title>
+  <title>Confidence Calibration</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
+  <!-- Grain texture overlay -->
+  <div class="grain"></div>
+
   <div class="container">
     <!-- Header -->
     <header>
-      <h1>Confidence Calibration Game</h1>
-      <p class="subtitle">Test and improve your estimation accuracy</p>
+      <div class="header-badge">Calibration Lab</div>
+      <h1>How well do you <em>know</em> what you know?</h1>
+      <p class="subtitle">Test the accuracy of your confidence. Set ranges, state your certainty, and discover your blind spots.</p>
     </header>
 
     <!-- Main content area -->
@@ -23,146 +27,189 @@
       <div class="game-area">
         <!-- Question Container -->
         <div id="question-container" class="card">
+          <div class="card-eyebrow">
+            <span class="category-dot"></span>
+            <span id="question-category">Question</span>
+          </div>
           <div class="question-section">
             <h2 id="question-text">Loading question...</h2>
           </div>
 
           <div class="input-section">
-            <div class="input-group">
-              <label for="low-input">Low Bound:</label>
-              <input type="number" id="low-input" placeholder="Enter minimum value" step="any">
-            </div>
+            <div class="range-inputs">
+              <div class="input-group">
+                <label for="low-input">Low bound</label>
+                <input type="number" id="low-input" placeholder="Min" step="any">
+              </div>
 
-            <div class="input-group">
-              <label for="high-input">High Bound:</label>
-              <input type="number" id="high-input" placeholder="Enter maximum value" step="any">
-            </div>
+              <div class="range-separator">
+                <span>&ndash;</span>
+              </div>
 
-            <div class="input-group slider-group">
-              <label for="confidence-slider">
-                Confidence: <span id="confidence-value">80%</span>
-              </label>
-              <input type="range" id="confidence-slider" min="50" max="99" value="80" step="1">
-              <div class="slider-labels">
-                <span>50%</span>
-                <span>99%</span>
+              <div class="input-group">
+                <label for="high-input">High bound</label>
+                <input type="number" id="high-input" placeholder="Max" step="any">
               </div>
             </div>
 
-            <button id="submit-btn" class="btn btn-primary">Submit Answer</button>
+            <div class="input-group slider-group">
+              <div class="slider-header">
+                <label for="confidence-slider">Confidence</label>
+                <span id="confidence-value" class="confidence-readout">80%</span>
+              </div>
+              <div class="slider-track-wrapper">
+                <input type="range" id="confidence-slider" min="1" max="99" value="80" step="1">
+              </div>
+              <div class="slider-labels">
+                <span>1% &mdash; No idea</span>
+                <span>99% &mdash; Certain</span>
+              </div>
+            </div>
+
+            <div id="validation-message" class="validation-message"></div>
+
+            <button id="submit-btn" class="btn btn-primary">
+              Submit
+              <span class="btn-key">Enter &crarr;</span>
+            </button>
           </div>
         </div>
 
         <!-- Feedback Container -->
         <div id="feedback-container" class="card">
           <div class="feedback-section">
-            <p id="feedback-text" class="feedback-message"></p>
-            <p id="correct-answer" class="correct-answer-text"></p>
-            <p id="question-score" class="question-score-text"></p>
+            <div id="feedback-text" class="feedback-message"></div>
+            <div class="answer-detail">
+              <p id="correct-answer" class="correct-answer-text"></p>
+              <p id="question-score" class="question-score-text"></p>
+            </div>
 
             <div class="distribution-container">
-              <h4>Your Probability Distribution</h4>
-              <canvas id="distribution-canvas" width="500" height="180"></canvas>
+              <div class="distribution-label">Probability Distribution</div>
+              <canvas id="distribution-canvas"></canvas>
             </div>
           </div>
 
-          <button id="next-btn" class="btn btn-primary">Next Question</button>
+          <button id="next-btn" class="btn btn-primary">
+            Next Question
+            <span class="btn-arrow">&rarr;</span>
+          </button>
         </div>
       </div>
 
       <!-- Right side: Stats -->
       <div class="stats-area">
-        <div class="card">
-          <h3>Your Statistics</h3>
+        <div class="card stats-card">
+          <div class="stats-header">
+            <h3>Performance</h3>
+            <span class="stats-count" id="stats-total-label">0 answered</span>
+          </div>
 
-          <!-- Primary Metric: Calibration Score -->
+          <!-- Primary Metric: Calibration Score + Chart -->
           <div class="primary-metric">
-            <div class="metric-icon">🎯</div>
-            <div class="metric-content">
-              <div class="metric-label">Calibration Score</div>
-              <div class="metric-value" id="stats-score">-</div>
-              <div class="metric-hint">Higher is better</div>
+            <div class="metric-label-row">
+              <span class="metric-label">Calibration Score</span>
+              <span class="metric-hint">higher is better</span>
             </div>
+            <div class="metric-value-large" id="stats-score">&mdash;</div>
+          </div>
+          <div class="chart-container">
+            <canvas id="chart-canvas"></canvas>
+          </div>
+
+          <!-- Secondary Metric: Calibration Bias + Chart -->
+          <div class="secondary-metric">
+            <div class="metric-label-row">
+              <span class="metric-label">Calibration Bias</span>
+              <span class="metric-status" id="stats-status">No data yet</span>
+            </div>
+            <div class="metric-value-medium" id="stats-bias">&mdash;</div>
+            <div class="metric-hint">Aim for 0%</div>
+          </div>
+          <div class="chart-container">
+            <canvas id="bias-chart-canvas"></canvas>
           </div>
 
           <!-- Secondary Metric: Over/Under Confidence Score -->
           <div class="secondary-metric">
-            <div class="metric-icon">⚖️</div>
-            <div class="metric-content">
-              <div class="metric-label">Over/Under Confidence</div>
-              <div class="metric-row">
-                <span class="metric-value" id="stats-confidence-bias">-</span>
-                <span class="metric-status" id="stats-confidence-status">No data yet</span>
-              </div>
-              <div class="metric-hint">0 = perfect, + = underconfident, - = overconfident</div>
+            <div class="metric-label-row">
+              <span class="metric-label">Over/Under Confidence</span>
+              <span class="metric-status" id="stats-confidence-status">No data yet</span>
             </div>
+            <div class="metric-value-medium" id="stats-confidence-bias">&mdash;</div>
+            <div class="metric-hint">0 = perfect, + = underconfident, - = overconfident</div>
           </div>
 
           <div class="stats-divider"></div>
 
-          <!-- Tertiary Metrics -->
+          <!-- Summary Metrics -->
           <div class="tertiary-metrics">
             <div class="tertiary-item">
-              <span class="tertiary-label">Questions:</span>
+              <span class="tertiary-label">Questions</span>
               <span class="tertiary-value" id="stats-total">0</span>
             </div>
             <div class="tertiary-item">
-              <span class="tertiary-label">Accuracy:</span>
-              <span class="tertiary-value" id="stats-accuracy">-</span>
+              <span class="tertiary-label">Accuracy</span>
+              <span class="tertiary-value" id="stats-accuracy">&mdash;</span>
             </div>
             <div class="tertiary-item">
-              <span class="tertiary-label">Avg Confidence:</span>
-              <span class="tertiary-value" id="stats-avg-confidence">-</span>
+              <span class="tertiary-label">Avg Confidence</span>
+              <span class="tertiary-value" id="stats-avg-confidence">&mdash;</span>
             </div>
           </div>
 
-          <!-- Chart -->
-          <div class="chart-container">
-            <h4>Progress Over Time</h4>
-            <canvas id="chart-canvas" width="400" height="200"></canvas>
-          </div>
-
-          <button id="reset-btn" class="btn btn-secondary">Reset Progress</button>
+          <button id="reset-btn" class="btn btn-ghost">Reset Progress</button>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Version footer -->
-  <footer style="text-align: center; color: rgba(255,255,255,0.7); margin-top: 20px; font-size: 0.85rem;">
+  <footer class="site-footer">
     <span id="version-info">v1.0.0</span>
   </footer>
 
   <!-- Welcome Modal -->
   <div id="welcome-modal" class="modal">
     <div class="modal-content">
-      <h2>Welcome to the Confidence Calibration Game!</h2>
+      <div class="modal-badge">Welcome</div>
+      <h2>Confidence<br>Calibration</h2>
+      <p class="modal-lead">Discover the gap between what you think you know and what you actually know.</p>
 
       <div class="instructions">
-        <h3>How to Play:</h3>
-        <ol>
-          <li><strong>Read the question</strong> - You'll be asked to estimate a numerical value</li>
-          <li><strong>Set your range</strong> - Enter a low and high bound that you think contains the correct answer</li>
-          <li><strong>Choose confidence</strong> - Use the slider to indicate your confidence level (50-99%)</li>
-          <li><strong>Submit</strong> - See if you were correct and track your calibration over time</li>
-        </ol>
-
-        <h3>What is Calibration?</h3>
-        <p>
-          Good calibration means your confidence matches your accuracy. For example, if you say you're
-          80% confident, you should be correct about 80% of the time. This game helps you learn if
-          you're overconfident, underconfident, or well-calibrated.
-        </p>
-
-        <h3>Tips:</h3>
-        <ul>
-          <li>Be honest with yourself about what you know and don't know</li>
-          <li>Wider ranges = higher confidence, narrower ranges = lower confidence</li>
-          <li>Track your progress over time to see if you're improving</li>
-        </ul>
+        <div class="instruction-grid">
+          <div class="instruction-step">
+            <span class="step-number">01</span>
+            <div>
+              <strong>Read the question</strong>
+              <p>You'll estimate a numerical value &mdash; distances, dates, measurements.</p>
+            </div>
+          </div>
+          <div class="instruction-step">
+            <span class="step-number">02</span>
+            <div>
+              <strong>Set your range</strong>
+              <p>Enter a low and high bound that you believe contains the answer.</p>
+            </div>
+          </div>
+          <div class="instruction-step">
+            <span class="step-number">03</span>
+            <div>
+              <strong>State your confidence</strong>
+              <p>How sure are you that your range captures the truth? 50% to 99%.</p>
+            </div>
+          </div>
+          <div class="instruction-step">
+            <span class="step-number">04</span>
+            <div>
+              <strong>Track your calibration</strong>
+              <p>If you say 80% confident, you should be right ~80% of the time.</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <button id="start-btn" class="btn btn-primary btn-large">Start Playing</button>
+      <button id="start-btn" class="btn btn-primary btn-large">Begin</button>
     </div>
   </div>
 
