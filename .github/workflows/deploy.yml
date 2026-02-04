@@ -29,4 +29,4 @@ jobs:
           fi
 
       - name: Push tagged commit to live
-        run: git push origin HEAD:live
+        run: git push origin HEAD:refs/heads/live
