@@ -139,51 +139,54 @@ describe('calculateConfidenceBiasScore', () => {
 });
 
 // ---------------------------------------------------------------------------
-// getConfidenceBiasScoreEMA  — α=0.3, starts at 0
+// getConfidenceBiasScoreEMA  — α=0.6 first, then α=0.3, starts at 0
 // ---------------------------------------------------------------------------
 describe('getConfidenceBiasScoreEMA', () => {
   test('empty history → null', () => {
     expect(Scoring.getConfidenceBiasScoreEMA([])).toBeNull();
   });
 
-  test('single correct answer at 80%: 0.3×20 + 0.7×0 = 6', () => {
+  test('single correct answer at 80%: 0.6×20 + 0.4×0 = 12', () => {
     expect(Scoring.getConfidenceBiasScoreEMA([
       { confidence: 80, isCorrect: true }
-    ])).toBeCloseTo(6);
+    ])).toBeCloseTo(12);
   });
 
   test('three-answer sequence produces expected EMA', () => {
-    // Manual trace:
-    //   answer 1: score=+20, ema = 0.3×20  + 0.7×0     =  6
-    //   answer 2: score=-80, ema = 0.3×-80 + 0.7×6     = -19.8
-    //   answer 3: score=+40, ema = 0.3×40  + 0.7×-19.8 = -1.86
+    // Manual trace (first sample uses α=0.6, rest use α=0.3):
+    //   answer 1: score=+20, ema = 0.6×20  + 0.4×0     =  12
+    //   answer 2: score=-80, ema = 0.3×-80 + 0.7×12    = -15.6
+    //   answer 3: score=+40, ema = 0.3×40  + 0.7×-15.6 =  1.08
     const history = [
       { confidence: 80, isCorrect: true },
       { confidence: 80, isCorrect: false },
       { confidence: 60, isCorrect: true },
     ];
-    expect(Scoring.getConfidenceBiasScoreEMA(history)).toBeCloseTo(-1.86);
+    expect(Scoring.getConfidenceBiasScoreEMA(history)).toBeCloseTo(1.08);
   });
 });
 
 // ---------------------------------------------------------------------------
-// getCalibrationScoreEMA  — α=0.3, initialises at max(70, firstScore)
+// getCalibrationScoreEMA  — α=0.6 first, then α=0.3, initialises at 50
 // ---------------------------------------------------------------------------
 describe('getCalibrationScoreEMA', () => {
   test('empty history → null', () => {
     expect(Scoring.getCalibrationScoreEMA([])).toBeNull();
   });
 
-  test('first answer initialises at ≥ 70', () => {
-    // Any single answer: EMA = max(70, normalised score), so always ≥ 70
+  test('first answer applies α=0.6 to initial value of 50', () => {
+    // EMA = 0.6 × score + 0.4 × 50
     const history = [{ userLow: 0, userHigh: 100, confidence: 80, correctAnswer: 50 }];
-    expect(Scoring.getCalibrationScoreEMA(history)).toBeGreaterThanOrEqual(70);
+    const result = Scoring.getCalibrationScoreEMA(history);
+    // Result should be between 50 and the raw score
+    expect(result).toBeGreaterThan(50);
+    expect(result).toBeLessThan(100);
   });
 
-  test('repeated bad scores pull EMA below 70', () => {
+  test('repeated bad scores pull EMA toward 0', () => {
     // Answer way outside range → normalised score ≈ 0, repeated 20× decays the EMA
     const bad = { userLow: 0, userHigh: 1, confidence: 80, correctAnswer: 10000 };
-    expect(Scoring.getCalibrationScoreEMA(Array(20).fill(bad))).toBeLessThan(70);
+    expect(Scoring.getCalibrationScoreEMA(Array(20).fill(bad))).toBeLessThan(10);
   });
 
   test('repeated perfect scores pull EMA toward 100', () => {
@@ -258,7 +261,7 @@ describe('calculateAllMetrics', () => {
 });
 
 // ---------------------------------------------------------------------------
-// getTimeSeriesData
+// getTimeSeriesData  — includes 0th point for trend line start
 // ---------------------------------------------------------------------------
 describe('getTimeSeriesData', () => {
   const history = [
@@ -266,57 +269,74 @@ describe('getTimeSeriesData', () => {
     { userLow: 0, userHigh: 100, confidence: 80, correctAnswer: 50, timestamp: 2000 },
   ];
 
-  test('one data point per history entry', () => {
-    expect(Scoring.getTimeSeriesData(history)).toHaveLength(2);
+  test('includes 0th point plus one per history entry', () => {
+    expect(Scoring.getTimeSeriesData(history)).toHaveLength(3);
   });
 
-  test('questionNumber is 1-indexed', () => {
+  test('0th point has questionNumber 0 and null score', () => {
     const data = Scoring.getTimeSeriesData(history);
-    expect(data[0].questionNumber).toBe(1);
-    expect(data[1].questionNumber).toBe(2);
+    expect(data[0].questionNumber).toBe(0);
+    expect(data[0].score).toBeNull();
+    expect(data[0].scoreEMA).toBe(50); // PRECISION_INITIAL
   });
 
-  test('each point has score, scoreEMA, questionNumber', () => {
-    const point = Scoring.getTimeSeriesData(history)[0];
+  test('answer points are 1-indexed starting at index 1', () => {
+    const data = Scoring.getTimeSeriesData(history);
+    expect(data[1].questionNumber).toBe(1);
+    expect(data[2].questionNumber).toBe(2);
+  });
+
+  test('answer points have numeric score and scoreEMA', () => {
+    const point = Scoring.getTimeSeriesData(history)[1];
     expect(typeof point.score).toBe('number');
     expect(typeof point.scoreEMA).toBe('number');
     expect(point.questionNumber).toBe(1);
   });
 
-  test('scoreEMA initialises at max(70, first score)', () => {
-    const point = Scoring.getTimeSeriesData(history)[0];
-    expect(point.scoreEMA).toBeGreaterThanOrEqual(70);
-    expect(point.scoreEMA).toBe(Math.max(70, point.score));
+  test('first answer EMA uses α=0.6 from initial 50', () => {
+    const data = Scoring.getTimeSeriesData(history);
+    const firstPoint = data[1];
+    // EMA = 0.6 × score + 0.4 × 50
+    const expected = 0.6 * firstPoint.score + 0.4 * 50;
+    expect(firstPoint.scoreEMA).toBeCloseTo(expected);
   });
 });
 
 // ---------------------------------------------------------------------------
-// getConfidenceBiasTimeSeriesData
+// getConfidenceBiasTimeSeriesData  — includes 0th point for trend line start
 // ---------------------------------------------------------------------------
 describe('getConfidenceBiasTimeSeriesData', () => {
-  test('raw scores match calculateConfidenceBiasScore', () => {
+  test('0th point has questionNumber 0, null bias, and EMA 0', () => {
+    const history = [{ confidence: 80, isCorrect: true, timestamp: 1000 }];
+    const data = Scoring.getConfidenceBiasTimeSeriesData(history);
+    expect(data[0].questionNumber).toBe(0);
+    expect(data[0].confidenceBias).toBeNull();
+    expect(data[0].confidenceBiasEMA).toBe(0);
+  });
+
+  test('raw scores match calculateConfidenceBiasScore (at index 1+)', () => {
     const history = [
       { confidence: 80, isCorrect: true,  timestamp: 1000 },  // raw = +20
       { confidence: 60, isCorrect: false, timestamp: 2000 },  // raw = -60
     ];
     const data = Scoring.getConfidenceBiasTimeSeriesData(history);
-    expect(data[0].confidenceBias).toBe(20);
-    expect(data[1].confidenceBias).toBe(-60);
+    expect(data[1].confidenceBias).toBe(20);
+    expect(data[2].confidenceBias).toBe(-60);
   });
 
-  test('EMA on first point: 0.3×raw + 0.7×0', () => {
+  test('EMA on first answer: 0.6×raw + 0.4×0', () => {
     const history = [{ confidence: 80, isCorrect: true, timestamp: 1000 }];
-    const point = Scoring.getConfidenceBiasTimeSeriesData(history)[0];
-    expect(point.confidenceBiasEMA).toBeCloseTo(6); // 0.3×20
+    const point = Scoring.getConfidenceBiasTimeSeriesData(history)[1];
+    expect(point.confidenceBiasEMA).toBeCloseTo(12); // 0.6×20
   });
 
-  test('questionNumber is 1-indexed', () => {
+  test('answer points are 1-indexed starting at index 1', () => {
     const history = [
       { confidence: 80, isCorrect: true,  timestamp: 1000 },
       { confidence: 80, isCorrect: false, timestamp: 2000 },
     ];
     const data = Scoring.getConfidenceBiasTimeSeriesData(history);
-    expect(data[0].questionNumber).toBe(1);
-    expect(data[1].questionNumber).toBe(2);
+    expect(data[1].questionNumber).toBe(1);
+    expect(data[2].questionNumber).toBe(2);
   });
 });
