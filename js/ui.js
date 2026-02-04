@@ -266,13 +266,13 @@ const UI = {
         this.elements.statsConfidenceStatus.className = 'metric-status status-good';
         this.elements.statsConfidenceBias.className = 'metric-value-medium bias-good';
       } else if (m.confidenceBiasScore > 0) {
-        confBiasStatus = 'Underconfident';
-        this.elements.statsConfidenceStatus.className = 'metric-status status-underconfident';
-        this.elements.statsConfidenceBias.className = 'metric-value-medium bias-underconfident';
-      } else {
         confBiasStatus = 'Overconfident';
         this.elements.statsConfidenceStatus.className = 'metric-status status-overconfident';
         this.elements.statsConfidenceBias.className = 'metric-value-medium bias-overconfident';
+      } else {
+        confBiasStatus = 'Underconfident';
+        this.elements.statsConfidenceStatus.className = 'metric-status status-underconfident';
+        this.elements.statsConfidenceBias.className = 'metric-value-medium bias-underconfident';
       }
       this.elements.statsConfidenceStatus.textContent = confBiasStatus;
 

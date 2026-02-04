@@ -204,23 +204,23 @@ const Scoring = {
 
   /**
    * Calculate confidence bias score for a single answer
-   * Formula: Right: (100 - confidence), Wrong: -confidence
+   * Formula: Right: (confidence - 100), Wrong: confidence
    * This averages to 0 for perfectly calibrated users
-   * Positive = underconfident (playing it safe)
-   * Negative = overconfident (being too bold)
+   * Positive = overconfident (being too bold)
+   * Negative = underconfident (playing it safe)
    */
   calculateConfidenceBiasScore(confidence, isCorrect) {
     if (isCorrect) {
-      return 100 - confidence;
+      return confidence - 100;
     } else {
-      return -confidence;
+      return confidence;
     }
   },
 
   /**
    * Calculate average confidence bias score across all answers
    * Averages to 0 for perfectly calibrated users
-   * Positive = underconfident, Negative = overconfident
+   * Positive = overconfident, Negative = underconfident
    */
   getConfidenceBiasScore(history) {
     if (history.length === 0) return null;
@@ -292,12 +292,13 @@ const Scoring = {
     const averageConfidence = this.getAverageConfidence(history);
 
     // Status based on confidence bias score
+    // Positive = overconfident, Negative = underconfident
     let status = 'No data yet';
     if (confidenceBiasScore !== null) {
       const absBias = Math.abs(confidenceBiasScore);
       if (absBias < 5) status = 'Well-calibrated';
-      else if (confidenceBiasScore > 0) status = 'Underconfident';
-      else status = 'Overconfident';
+      else if (confidenceBiasScore > 0) status = 'Overconfident';
+      else status = 'Underconfident';
     }
 
     return {

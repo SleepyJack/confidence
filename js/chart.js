@@ -179,16 +179,17 @@ const Chart = {
     const ctx = this.confidenceBiasCanvas.getContext('2d');
 
     // Color raw points by bias direction (null values get transparent)
+    // Positive = overconfident (red), Negative = underconfident (blue)
     const pointColors = rawBiases.map(b => {
       if (b === null) return 'transparent';
       if (Math.abs(b) < 5) return 'rgba(74, 222, 128, 0.5)';
-      return b > 0 ? 'rgba(96, 165, 250, 0.5)' : 'rgba(248, 113, 113, 0.5)';
+      return b > 0 ? 'rgba(248, 113, 113, 0.5)' : 'rgba(96, 165, 250, 0.5)';
     });
 
     const pointBorderColors = rawBiases.map(b => {
       if (b === null) return 'transparent';
       if (Math.abs(b) < 5) return '#4ade80';
-      return b > 0 ? '#60a5fa' : '#f87171';
+      return b > 0 ? '#f87171' : '#60a5fa';
     });
 
     if (this.confidenceBiasChartInstance) this.confidenceBiasChartInstance.destroy();

@@ -110,23 +110,24 @@ describe('calculateLogScore', () => {
 });
 
 // ---------------------------------------------------------------------------
-// calculateConfidenceBiasScore  — right: +(100-conf), wrong: -conf
+// calculateConfidenceBiasScore  — right: (conf-100), wrong: conf
+// Positive = overconfident, Negative = underconfident
 // ---------------------------------------------------------------------------
 describe('calculateConfidenceBiasScore', () => {
-  test('correct at 80% → +20', () => {
-    expect(Scoring.calculateConfidenceBiasScore(80, true)).toBe(20);
+  test('correct at 80% → -20 (underconfident)', () => {
+    expect(Scoring.calculateConfidenceBiasScore(80, true)).toBe(-20);
   });
 
-  test('wrong at 80% → -80', () => {
-    expect(Scoring.calculateConfidenceBiasScore(80, false)).toBe(-80);
+  test('wrong at 80% → +80 (overconfident)', () => {
+    expect(Scoring.calculateConfidenceBiasScore(80, false)).toBe(80);
   });
 
-  test('correct at 50% → +50', () => {
-    expect(Scoring.calculateConfidenceBiasScore(50, true)).toBe(50);
+  test('correct at 50% → -50 (underconfident)', () => {
+    expect(Scoring.calculateConfidenceBiasScore(50, true)).toBe(-50);
   });
 
-  test('wrong at 50% → -50', () => {
-    expect(Scoring.calculateConfidenceBiasScore(50, false)).toBe(-50);
+  test('wrong at 50% → +50 (overconfident)', () => {
+    expect(Scoring.calculateConfidenceBiasScore(50, false)).toBe(50);
   });
 
   test('perfectly calibrated 80% user averages to 0 (4 right, 1 wrong)', () => {
@@ -140,29 +141,30 @@ describe('calculateConfidenceBiasScore', () => {
 
 // ---------------------------------------------------------------------------
 // getConfidenceBiasScoreEMA  — α=0.6 first, then α=0.3, starts at 0
+// Positive = overconfident, Negative = underconfident
 // ---------------------------------------------------------------------------
 describe('getConfidenceBiasScoreEMA', () => {
   test('empty history → null', () => {
     expect(Scoring.getConfidenceBiasScoreEMA([])).toBeNull();
   });
 
-  test('single correct answer at 80%: 0.6×20 + 0.4×0 = 12', () => {
+  test('single correct answer at 80%: 0.6×(-20) + 0.4×0 = -12', () => {
     expect(Scoring.getConfidenceBiasScoreEMA([
       { confidence: 80, isCorrect: true }
-    ])).toBeCloseTo(12);
+    ])).toBeCloseTo(-12);
   });
 
   test('three-answer sequence produces expected EMA', () => {
     // Manual trace (first sample uses α=0.6, rest use α=0.3):
-    //   answer 1: score=+20, ema = 0.6×20  + 0.4×0     =  12
-    //   answer 2: score=-80, ema = 0.3×-80 + 0.7×12    = -15.6
-    //   answer 3: score=+40, ema = 0.3×40  + 0.7×-15.6 =  1.08
+    //   answer 1: score=-20, ema = 0.6×(-20) + 0.4×0    = -12
+    //   answer 2: score=+80, ema = 0.3×80   + 0.7×(-12) =  15.6
+    //   answer 3: score=-40, ema = 0.3×(-40)+ 0.7×15.6  = -1.08
     const history = [
       { confidence: 80, isCorrect: true },
       { confidence: 80, isCorrect: false },
       { confidence: 60, isCorrect: true },
     ];
-    expect(Scoring.getConfidenceBiasScoreEMA(history)).toBeCloseTo(1.08);
+    expect(Scoring.getConfidenceBiasScoreEMA(history)).toBeCloseTo(-1.08);
   });
 });
 
@@ -245,12 +247,12 @@ describe('calculateAllMetrics', () => {
     expect(m.confidenceBiasScore).not.toBeNull();
     expect(m.actualAccuracy).toBe(100);
     expect(m.averageConfidence).toBe(80);
-    // Two correct at 80% → bias scores are +20 each → positive → Underconfident
+    // Two correct at 80% → bias scores are -20 each → negative → Underconfident
     expect(m.status).toBe('Underconfident');
   });
 
   test('status is "Well-calibrated" when bias EMA is within ±5', () => {
-    // All correct at 99% → bias score = +1 each time → EMA converges to ~1
+    // All correct at 99% → bias score = -1 each time → EMA converges to ~-1
     const history = Array(5).fill(
       { userLow: 0, userHigh: 100, confidence: 99, correctAnswer: 50, isCorrect: true }
     );
@@ -316,18 +318,18 @@ describe('getConfidenceBiasTimeSeriesData', () => {
 
   test('raw scores match calculateConfidenceBiasScore (at index 1+)', () => {
     const history = [
-      { confidence: 80, isCorrect: true,  timestamp: 1000 },  // raw = +20
-      { confidence: 60, isCorrect: false, timestamp: 2000 },  // raw = -60
+      { confidence: 80, isCorrect: true,  timestamp: 1000 },  // raw = -20
+      { confidence: 60, isCorrect: false, timestamp: 2000 },  // raw = +60
     ];
     const data = Scoring.getConfidenceBiasTimeSeriesData(history);
-    expect(data[1].confidenceBias).toBe(20);
-    expect(data[2].confidenceBias).toBe(-60);
+    expect(data[1].confidenceBias).toBe(-20);
+    expect(data[2].confidenceBias).toBe(60);
   });
 
   test('EMA on first answer: 0.6×raw + 0.4×0', () => {
     const history = [{ confidence: 80, isCorrect: true, timestamp: 1000 }];
     const point = Scoring.getConfidenceBiasTimeSeriesData(history)[1];
-    expect(point.confidenceBiasEMA).toBeCloseTo(12); // 0.6×20
+    expect(point.confidenceBiasEMA).toBeCloseTo(-12); // 0.6×(-20)
   });
 
   test('answer points are 1-indexed starting at index 1', () => {
