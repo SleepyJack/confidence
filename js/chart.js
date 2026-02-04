@@ -86,7 +86,7 @@ const Chart = {
         datasets: [
           // EMA line (drawn first, behind scatter)
           {
-            label: 'Smoothed',
+            label: 'Trend',
             data: emaScores,
             borderColor: lineGrad,
             backgroundColor: fillGrad,
@@ -99,7 +99,7 @@ const Chart = {
           },
           // Raw scatter points (drawn second, on top)
           {
-            label: 'Raw',
+            label: 'Score',
             data: rawScores,
             borderColor: 'transparent',
             backgroundColor: 'transparent',
@@ -126,9 +126,9 @@ const Chart = {
               title: (items) => 'Question ' + items[0].label,
               label: (ctx) => {
                 if (ctx.datasetIndex === 0) {
-                  return 'Smoothed: ' + ctx.parsed.y.toFixed(1) + '%';
+                  return 'Trend: ' + ctx.parsed.y.toFixed(1) + '%';
                 } else {
-                  return 'Raw: ' + ctx.parsed.y.toFixed(1) + '%';
+                  return 'Score: ' + ctx.parsed.y.toFixed(1) + '%';
                 }
               }
             }
@@ -195,7 +195,7 @@ const Chart = {
         datasets: [
           // EMA line (drawn first, behind scatter)
           {
-            label: 'Smoothed',
+            label: 'Trend',
             data: emaBiases,
             borderColor: '#9a9590',
             borderWidth: 2,
@@ -207,7 +207,7 @@ const Chart = {
           },
           // Raw scatter points (drawn second, on top)
           {
-            label: 'Raw',
+            label: 'Score',
             data: rawBiases,
             borderColor: 'transparent',
             backgroundColor: 'transparent',
@@ -234,7 +234,7 @@ const Chart = {
               label: (ctx) => {
                 const v = ctx.parsed.y;
                 const sign = v >= 0 ? '+' : '';
-                const label = ctx.datasetIndex === 0 ? 'Smoothed: ' : 'Raw: ';
+                const label = ctx.datasetIndex === 0 ? 'Trend: ' : 'Score: ';
                 return label + sign + v.toFixed(1);
               }
             }
