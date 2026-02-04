@@ -34,49 +34,17 @@ All of the following has been implemented and is live:
 
 ---
 
-## Next Up: Question Generation
+## Phase A — API Seam — Complete ✓
 
-### Motivation
+The `/api/next-question` pattern is wired up. The frontend calls one endpoint; the serverless function reads from `questions.json`. Behaviour is identical to before, but the seam is in place — swapping in AI generation later is a single-file change on the server side.
 
-AI-generated questions are the most unique aspect of the project and the natural next step. The static set of 45 questions will eventually run out for engaged users.
+- `api/next-question.js` — Vercel serverless function. Accepts `?seen=id1,id2,...` to exclude already-seen questions. Returns one question + a `poolReset` flag when the pool is exhausted.
+- `js/game.js` — `getNextQuestion()` is now async, calls the API. Seen-tracking stays client-side (sent to the server as a query param).
+- Hosting must be Vercel (or equivalent). GitHub Pages won't serve API routes. See `DEPLOY.md`.
 
-### Architecture: `/api/next-question`
+---
 
-The key insight is to introduce a **thin API layer** between the frontend and the question source. The frontend calls one endpoint and doesn't care where the question comes from — static JSON, a database, or AI generation. This decouples question management from the game entirely.
-
-```
-Frontend
-    │
-    │  GET /api/next-question
-    ▼
-Serverless Function          ← single point of change
-    │
-    ├── questions.json        (static pool, works today)
-    └── Claude API            (AI generation, key in env vars)
-```
-
-**Frontend change is minimal:**
-```javascript
-// Before: load static JSON directly
-const questions = await fetch('data/questions.json').then(r => r.json());
-const question = questions[randomIndex];
-
-// After: call the API
-const question = await fetch('/api/next-question').then(r => r.json());
-```
-
-Question object shape stays the same (`id`, `question`, `answer`, `unit`, `category`) so the rest of the game is untouched.
-
-### Phasing
-
-**Phase A — Wire up the API pattern (no AI yet)**
-- Move hosting to Vercel (handles static site + API routes in one place)
-- Create `/api/next-question` serverless function that serves from existing `questions.json`
-- Update frontend to call the API
-- Everything works exactly as before, but the seam is in place
-- AI API key can be added to Vercel env vars at any time
-
-**Phase B — Add AI generation**
+## Next Up: Phase B — AI Generation
 - Batch-generate questions on first request (or on a cron schedule)
 - Cache generated questions (Vercel KV or in-memory)
 - Serve from the pool — don't generate per-request (slow + expensive)
@@ -110,17 +78,6 @@ Question object shape stays the same (`id`, `question`, `answer`, `unit`, `categ
 - Batch generation (20 questions per API call, not 1)
 - Generated questions are reused across all users
 - Cache aggressively, only regenerate when pool is low
-
-### Hosting: Vercel
-
-Vercel is the right home for this project at this stage:
-- Deploys from GitHub (like GitHub Pages, but with API routes)
-- Serverless functions are first-class — `/api/next-question` is just a file in an `api/` directory
-- Environment variables for secrets (AI API key)
-- Free tier covers early usage; Pro is $20/mo if needed
-- Cron jobs available for periodic tasks (question refresh)
-
-No need for AWS, GCP, or a persistent backend service at this stage.
 
 ---
 
