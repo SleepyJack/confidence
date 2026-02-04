@@ -1,0 +1,28 @@
+name: Deploy to live
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history needed for push to live
+
+      - name: Validate tag matches version.txt
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          FILE_VERSION=$(cat version.txt | tr -d '[:space:]')
+          echo "Tag:  v${TAG_VERSION}"
+          echo "File: ${FILE_VERSION}"
+          if [ "${TAG_VERSION}" != "${FILE_VERSION}" ]; then
+            echo "ERROR: tag v${TAG_VERSION} does not match version.txt (${FILE_VERSION})"
+            exit 1
+          fi
+
+      - name: Push tagged commit to live
+        run: git push origin HEAD:live
