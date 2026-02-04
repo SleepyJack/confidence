@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -12,6 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # full history needed for push to live
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Validate tag matches version.txt
         run: |
