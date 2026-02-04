@@ -19,7 +19,7 @@ function initApp() {
       })
       .catch(() => {});
 
-    console.log('Confidence Calibration Game initialized');
+    console.log('Calibration Game initialized');
   } catch (error) {
     console.error('Failed to initialize app:', error);
     alert('Failed to load the game. Please refresh the page.');

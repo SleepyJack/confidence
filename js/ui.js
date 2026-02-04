@@ -26,13 +26,10 @@ const UI = {
       questionScore: document.getElementById('question-score'),
       validationMessage: document.getElementById('validation-message'),
       distributionCanvas: document.getElementById('distribution-canvas'),
-      statsTotal: document.getElementById('stats-total'),
       statsTotalLabel: document.getElementById('stats-total-label'),
       statsScore: document.getElementById('stats-score'),
       statsConfidenceBias: document.getElementById('stats-confidence-bias'),
       statsConfidenceStatus: document.getElementById('stats-confidence-status'),
-      statsAccuracy: document.getElementById('stats-accuracy'),
-      statsAvgConfidence: document.getElementById('stats-avg-confidence'),
       chartCanvas: document.getElementById('chart-canvas'),
       confidenceBiasChartCanvas: document.getElementById('confidence-bias-chart-canvas'),
       welcomeModal: document.getElementById('welcome-modal'),
@@ -44,9 +41,12 @@ const UI = {
     Chart.init(this.elements.chartCanvas, this.elements.confidenceBiasChartCanvas);
     Distribution.init(this.elements.distributionCanvas);
 
-    // Show welcome modal on first visit
+    // Show welcome modal on first visit, otherwise resume game
     if (Storage.loadHistory().length === 0) {
       this.showWelcome();
+    } else {
+      // Resume existing session - load next question and show stats
+      this.loadNewQuestion();
     }
   },
 
@@ -114,8 +114,8 @@ const UI = {
     // Reset inputs
     this.elements.lowInput.value = '';
     this.elements.highInput.value = '';
-    this.elements.confidenceSlider.value = 50;
-    this.elements.confidenceValue.textContent = '50%';
+    this.elements.confidenceSlider.value = 80;
+    this.elements.confidenceValue.textContent = '80%';
 
     // Show question, hide feedback
     this.hideValidation();
@@ -216,8 +216,7 @@ const UI = {
     );
     const normalizedScore = Scoring.normalizeLogScore(logScore);
 
-    this.elements.questionScore.textContent =
-      `Score: ${normalizedScore.toFixed(1)}%  (log score: ${logScore.toFixed(2)})`;
+    this.elements.questionScore.textContent = `Precision: ${normalizedScore.toFixed(1)}%`;
 
     // Draw probability distribution visualization
     Distribution.draw(
@@ -246,7 +245,6 @@ const UI = {
     const m = state.metrics;
 
     // Total questions
-    this.elements.statsTotal.textContent = m.totalAnswered;
     if (this.elements.statsTotalLabel) {
       this.elements.statsTotalLabel.textContent = m.totalAnswered + ' answered';
     }
@@ -278,10 +276,6 @@ const UI = {
       }
       this.elements.statsConfidenceStatus.textContent = confBiasStatus;
 
-      // Secondary metrics (accuracy and avg confidence)
-      this.elements.statsAccuracy.textContent = m.actualAccuracy.toFixed(0) + '%';
-      this.elements.statsAvgConfidence.textContent = m.averageConfidence.toFixed(0) + '%';
-
       // Update chart
       Chart.draw(state.history);
     } else {
@@ -290,8 +284,6 @@ const UI = {
       this.elements.statsConfidenceBias.className = 'metric-value-medium';
       this.elements.statsConfidenceStatus.textContent = 'No data yet';
       this.elements.statsConfidenceStatus.className = 'metric-status';
-      this.elements.statsAccuracy.textContent = '\u2014';
-      this.elements.statsAvgConfidence.textContent = '\u2014';
       Chart.drawEmpty();
     }
   },

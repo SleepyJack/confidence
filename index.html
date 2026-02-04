@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confidence Calibration</title>
+  <title>Calibration Game</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
   <div class="container">
     <!-- Header -->
     <header>
-      <div class="header-badge">Calibration Lab</div>
+      <div class="header-badge">Calibration Game</div>
       <h1>How well do you <em>know</em> what you know?</h1>
       <p class="subtitle">Test the accuracy of your confidence. Set ranges, state your certainty, and discover your blind spots.</p>
     </header>
@@ -130,24 +130,6 @@
             <canvas id="confidence-bias-chart-canvas"></canvas>
           </div>
 
-          <div class="stats-divider"></div>
-
-          <!-- Summary Metrics -->
-          <div class="tertiary-metrics">
-            <div class="tertiary-item">
-              <span class="tertiary-label">Questions</span>
-              <span class="tertiary-value" id="stats-total">0</span>
-            </div>
-            <div class="tertiary-item">
-              <span class="tertiary-label">Accuracy</span>
-              <span class="tertiary-value" id="stats-accuracy">&mdash;</span>
-            </div>
-            <div class="tertiary-item">
-              <span class="tertiary-label">Avg Confidence</span>
-              <span class="tertiary-value" id="stats-avg-confidence">&mdash;</span>
-            </div>
-          </div>
-
           <button id="reset-btn" class="btn btn-ghost">Reset Progress</button>
         </div>
       </div>
@@ -163,7 +145,7 @@
   <div id="welcome-modal" class="modal">
     <div class="modal-content">
       <div class="modal-badge">Welcome</div>
-      <h2>Confidence<br>Calibration</h2>
+      <h2>Calibration<br>Game</h2>
       <p class="modal-lead">Discover the gap between what you think you know and what you actually know.</p>
 
       <div class="instructions">
