@@ -17,6 +17,16 @@ jobs:
           fetch-depth: 0  # full history needed for push to live
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run tests
+        run: npm test
+
       - name: Validate tag matches version.txt
         run: |
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"

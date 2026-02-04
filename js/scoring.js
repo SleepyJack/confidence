@@ -48,10 +48,10 @@ const Scoring = {
     let t, z;
     if (p < 0.5) {
       t = Math.sqrt(-2 * Math.log(p));
-      z = -((c0 + c1 * t + c2 * t * t) / (1 + d1 * t + d2 * t * t + d3 * t * t * t));
+      z = -(t - (c0 + c1 * t + c2 * t * t) / (1 + d1 * t + d2 * t * t + d3 * t * t * t));
     } else {
       t = Math.sqrt(-2 * Math.log(1 - p));
-      z = (c0 + c1 * t + c2 * t * t) / (1 + d1 * t + d2 * t * t + d3 * t * t * t);
+      z = t - (c0 + c1 * t + c2 * t * t) / (1 + d1 * t + d2 * t * t + d3 * t * t * t);
     }
 
     return z;
