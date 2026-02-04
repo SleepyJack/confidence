@@ -1,0 +1,100 @@
+const mockQuestions = [
+  { id: 'q1', question: 'Question 1?', answer: 100, unit: 'm',  category: 'test' },
+  { id: 'q2', question: 'Question 2?', answer: 200, unit: 'kg', category: 'science' },
+  { id: 'q3', question: 'Question 3?', answer: 300, unit: 's',  category: 'geography' },
+];
+
+// Helpers ---------------------------------------------------------------
+function req(method = 'GET', query = {}) {
+  return { method, query };
+}
+
+function res() {
+  const r = {};
+  r.status = jest.fn(() => r);
+  r.json   = jest.fn(() => r);
+  return r;
+}
+
+// next-question.js caches questions at module scope, so we need a fresh
+// require for each test to avoid cross-test pollution.
+let handler;
+beforeEach(() => {
+  jest.resetModules();
+  jest.doMock('fs', () => ({
+    readFileSync: jest.fn(() => JSON.stringify(mockQuestions)),
+  }));
+  handler = require('../api/next-question');
+});
+
+// -----------------------------------------------------------------------
+describe('next-question', () => {
+  test('rejects non-GET with 405', async () => {
+    const r = res();
+    await handler(req('POST'), r);
+    expect(r.status).toHaveBeenCalledWith(405);
+    expect(r.json).toHaveBeenCalledWith({ error: 'Method not allowed' });
+  });
+
+  test('returns a valid question and poolReset: false when nothing seen', async () => {
+    const r = res();
+    await handler(req('GET', {}), r);
+    expect(r.status).toHaveBeenCalledWith(200);
+
+    const { question, poolReset } = r.json.mock.calls[0][0];
+    expect(mockQuestions).toContainEqual(question);
+    expect(poolReset).toBe(false);
+  });
+
+  test('excludes seen questions', async () => {
+    const r = res();
+    await handler(req('GET', { seen: 'q1,q2' }), r);
+
+    const { question, poolReset } = r.json.mock.calls[0][0];
+    expect(question.id).toBe('q3');
+    expect(poolReset).toBe(false);
+  });
+
+  test('sets poolReset: true when every question has been seen', async () => {
+    const r = res();
+    await handler(req('GET', { seen: 'q1,q2,q3' }), r);
+
+    const { question, poolReset } = r.json.mock.calls[0][0];
+    expect(mockQuestions).toContainEqual(question); // still returns *a* question
+    expect(poolReset).toBe(true);
+  });
+
+  test('ignores unknown IDs in seen list', async () => {
+    const r = res();
+    await handler(req('GET', { seen: 'q1,q2,unknown-id' }), r);
+
+    const { question, poolReset } = r.json.mock.calls[0][0];
+    expect(question.id).toBe('q3');       // only q3 is unseen
+    expect(poolReset).toBe(false);
+  });
+
+  test('returned question has expected shape', async () => {
+    const r = res();
+    await handler(req('GET'), r);
+
+    const { question } = r.json.mock.calls[0][0];
+    expect(question).toHaveProperty('id');
+    expect(question).toHaveProperty('question');
+    expect(question).toHaveProperty('answer');
+    expect(question).toHaveProperty('unit');
+    expect(question).toHaveProperty('category');
+  });
+
+  test('returns 500 when questions file is empty', async () => {
+    jest.resetModules();
+    jest.doMock('fs', () => ({
+      readFileSync: jest.fn(() => JSON.stringify([])),
+    }));
+    const emptyHandler = require('../api/next-question');
+
+    const r = res();
+    await emptyHandler(req('GET'), r);
+    expect(r.status).toHaveBeenCalledWith(500);
+    expect(r.json).toHaveBeenCalledWith({ error: 'No questions available' });
+  });
+});
