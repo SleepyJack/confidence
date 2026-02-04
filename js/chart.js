@@ -64,7 +64,7 @@ const Chart = {
       return;
     }
 
-    const labels = timeSeriesData.map((_, i) => i + 1);
+    const labels = timeSeriesData.map(p => p.questionNumber);
     const rawScores = timeSeriesData.map(p => p.score);
     const emaScores = timeSeriesData.map(p => p.scoreEMA);
 
@@ -123,7 +123,10 @@ const Chart = {
           tooltip: {
             ...this._tooltipConfig(),
             callbacks: {
-              title: (items) => 'Question ' + items[0].label,
+              title: (items) => {
+                const q = items[0].label;
+                return q === '0' ? 'Start' : 'Question ' + q;
+              },
               label: (ctx) => {
                 if (ctx.datasetIndex === 0) {
                   return 'Trend: ' + ctx.parsed.y.toFixed(1) + '%';
@@ -169,19 +172,21 @@ const Chart = {
       return;
     }
 
-    const labels = biasData.map((_, i) => i + 1);
+    const labels = biasData.map(p => p.questionNumber);
     const rawBiases = biasData.map(p => p.confidenceBias);
     const emaBiases = biasData.map(p => p.confidenceBiasEMA);
 
     const ctx = this.confidenceBiasCanvas.getContext('2d');
 
-    // Color raw points by bias direction
+    // Color raw points by bias direction (null values get transparent)
     const pointColors = rawBiases.map(b => {
+      if (b === null) return 'transparent';
       if (Math.abs(b) < 5) return 'rgba(74, 222, 128, 0.5)';
       return b > 0 ? 'rgba(96, 165, 250, 0.5)' : 'rgba(248, 113, 113, 0.5)';
     });
 
     const pointBorderColors = rawBiases.map(b => {
+      if (b === null) return 'transparent';
       if (Math.abs(b) < 5) return '#4ade80';
       return b > 0 ? '#60a5fa' : '#f87171';
     });
@@ -230,7 +235,10 @@ const Chart = {
           tooltip: {
             ...this._tooltipConfig(),
             callbacks: {
-              title: (items) => 'Question ' + items[0].label,
+              title: (items) => {
+                const q = items[0].label;
+                return q === '0' ? 'Start' : 'Question ' + q;
+              },
               label: (ctx) => {
                 const v = ctx.parsed.y;
                 const sign = v >= 0 ? '+' : '';

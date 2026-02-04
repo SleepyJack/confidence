@@ -95,7 +95,8 @@ const Scoring = {
    */
   LOG_SCORE_FLOOR: -12,
   EMA_ALPHA: 0.3, // 30% new value, 70% old value
-  PRECISION_INITIAL: 70, // Initial precision score (%)
+  EMA_ALPHA_FIRST: 0.6, // Double gain for first sample
+  PRECISION_INITIAL: 50, // Initial precision score (%)
 
   getAverageLogScore(history) {
     if (history.length === 0) return null;
@@ -120,9 +121,9 @@ const Scoring = {
   getCalibrationScoreEMA(history) {
     if (history.length === 0) return null;
 
-    let ema = null;
+    let ema = this.PRECISION_INITIAL;
 
-    history.forEach((answer) => {
+    history.forEach((answer, index) => {
       const logScore = Math.max(
         this.calculateLogScore(
           answer.userLow,
@@ -134,13 +135,9 @@ const Scoring = {
       );
       const normalizedScore = this.normalizeLogScore(logScore);
 
-      if (ema === null) {
-        // Initialize with max of 70% or first score
-        ema = Math.max(this.PRECISION_INITIAL, normalizedScore);
-      } else {
-        // EMA formula: new = α × value + (1 - α) × old
-        ema = this.EMA_ALPHA * normalizedScore + (1 - this.EMA_ALPHA) * ema;
-      }
+      // Use double gain for first sample, normal gain thereafter
+      const alpha = index === 0 ? this.EMA_ALPHA_FIRST : this.EMA_ALPHA;
+      ema = alpha * normalizedScore + (1 - alpha) * ema;
     });
 
     return ema;
@@ -244,10 +241,11 @@ const Scoring = {
 
     let ema = 0; // Start at 0 (perfectly calibrated)
 
-    history.forEach((answer) => {
+    history.forEach((answer, index) => {
       const score = this.calculateConfidenceBiasScore(answer.confidence, answer.isCorrect);
-      // EMA formula: new = α × value + (1 - α) × old
-      ema = this.EMA_ALPHA * score + (1 - this.EMA_ALPHA) * ema;
+      // Use double gain for first sample, normal gain thereafter
+      const alpha = index === 0 ? this.EMA_ALPHA_FIRST : this.EMA_ALPHA;
+      ema = alpha * score + (1 - alpha) * ema;
     });
 
     return ema;
@@ -317,16 +315,26 @@ const Scoring = {
   /**
    * Get confidence bias data points for time-series chart
    * Returns both raw scores and EMA smoothed values
+   * Includes a 0th point showing the initial EMA value (no scatter point)
    */
   getConfidenceBiasTimeSeriesData(history) {
     const data = [];
-    let ema = 0; // Start at 0
+    let ema = 0; // Start at 0 (perfectly calibrated)
+
+    // Add 0th point showing initial EMA value (null = no scatter point)
+    data.push({
+      questionNumber: 0,
+      confidenceBias: null,      // No scatter point for initial value
+      confidenceBiasEMA: ema,    // Starting point for trend line
+      timestamp: null
+    });
 
     history.forEach((answer, index) => {
       const rawScore = this.calculateConfidenceBiasScore(answer.confidence, answer.isCorrect);
 
-      // Update EMA
-      ema = this.EMA_ALPHA * rawScore + (1 - this.EMA_ALPHA) * ema;
+      // Use double gain for first sample, normal gain thereafter
+      const alpha = index === 0 ? this.EMA_ALPHA_FIRST : this.EMA_ALPHA;
+      ema = alpha * rawScore + (1 - alpha) * ema;
 
       data.push({
         questionNumber: index + 1,
@@ -342,10 +350,19 @@ const Scoring = {
   /**
    * Get data points for time-series chart (Precision Score)
    * Returns both raw scores and EMA smoothed values
+   * Includes a 0th point showing the initial EMA value (no scatter point)
    */
   getTimeSeriesData(history) {
     const data = [];
-    let ema = null;
+    let ema = this.PRECISION_INITIAL;
+
+    // Add 0th point showing initial EMA value (null score = no scatter point)
+    data.push({
+      questionNumber: 0,
+      score: null,           // No scatter point for initial value
+      scoreEMA: ema,         // Starting point for trend line
+      timestamp: null
+    });
 
     history.forEach((answer, index) => {
       const logScore = Math.max(
@@ -359,12 +376,9 @@ const Scoring = {
       );
       const rawScore = this.normalizeLogScore(logScore);
 
-      // Update EMA
-      if (ema === null) {
-        ema = Math.max(this.PRECISION_INITIAL, rawScore);
-      } else {
-        ema = this.EMA_ALPHA * rawScore + (1 - this.EMA_ALPHA) * ema;
-      }
+      // Use double gain for first sample, normal gain thereafter
+      const alpha = index === 0 ? this.EMA_ALPHA_FIRST : this.EMA_ALPHA;
+      ema = alpha * rawScore + (1 - alpha) * ema;
 
       data.push({
         questionNumber: index + 1,
