@@ -78,9 +78,12 @@ function generateId(question) {
 async function getNextQuestion(seenIds) {
   const client = getClient();
 
-  // Get the model name: env var overrides config, which has a default fallback
+  // Get the model name from config
   const cfg = getConfig();
-  const modelName = process.env.GEMINI_MODEL || cfg.gemini?.model || 'gemini-2.5-flash';
+  const modelName = cfg.gemini?.model;
+  if (!modelName) {
+    throw new Error('gemini.model not configured in config.json');
+  }
 
   // Get the model with grounding enabled
   const model = client.getGenerativeModel({
