@@ -5,7 +5,8 @@
     "answer": 384400,
     "unit": "km",
     "category": "astronomy",
-    "source": "NASA"
+    "sourceName": "NASA",
+    "sourceUrl": "https://moon.nasa.gov/moon-in-motion/overview/"
   },
   {
     "id": "everest-height",
@@ -13,7 +14,8 @@
     "answer": 8849,
     "unit": "m",
     "category": "geography",
-    "source": "Survey of Nepal 2020"
+    "sourceName": "Survey of Nepal 2020",
+    "sourceUrl": "https://www.nationalgeographic.com/environment/article/new-satisfying-height-mount-everest"
   },
   {
     "id": "human-bones",
@@ -21,7 +23,8 @@
     "answer": 206,
     "unit": "bones",
     "category": "biology",
-    "source": "Medical textbooks"
+    "sourceName": "Medical textbooks",
+    "sourceUrl": "https://medlineplus.gov/ency/article/002244.htm"
   },
   {
     "id": "speed-of-light",
@@ -29,7 +32,8 @@
     "answer": 299792,
     "unit": "km/s",
     "category": "physics",
-    "source": "NIST"
+    "sourceName": "NIST",
+    "sourceUrl": "https://physics.nist.gov/cgi-bin/cuu/Value?c"
   },
   {
     "id": "battle-hastings",
@@ -37,7 +41,8 @@
     "answer": 1066,
     "unit": "year",
     "category": "history",
-    "source": "Historical records"
+    "sourceName": "Historical records",
+    "sourceUrl": "https://www.britannica.com/event/Battle-of-Hastings"
   },
   {
     "id": "earth-circumference",
@@ -45,7 +50,8 @@
     "answer": 40075,
     "unit": "km",
     "category": "geography",
-    "source": "WGS 84"
+    "sourceName": "WGS 84",
+    "sourceUrl": "https://earth-info.nga.mil/GandG/publications/tr8350.2/wgs84fin.pdf"
   },
   {
     "id": "titanic-year",
@@ -53,7 +59,8 @@
     "answer": 1912,
     "unit": "year",
     "category": "history",
-    "source": "Historical records"
+    "sourceName": "Historical records",
+    "sourceUrl": "https://www.britannica.com/topic/Titanic"
   },
   {
     "id": "eiffel-tower-height",
@@ -61,7 +68,8 @@
     "answer": 330,
     "unit": "m",
     "category": "architecture",
-    "source": "Official Eiffel Tower website"
+    "sourceName": "Official Eiffel Tower website",
+    "sourceUrl": "https://www.toureiffel.paris/en/the-monument"
   },
   {
     "id": "us-states",
@@ -69,7 +77,8 @@
     "answer": 50,
     "unit": "states",
     "category": "geography",
-    "source": "US Government"
+    "sourceName": "US Government",
+    "sourceUrl": "https://www.usa.gov/states-and-territories"
   },
   {
     "id": "tokyo-population",
@@ -77,7 +86,8 @@
     "answer": 37,
     "unit": "million",
     "category": "demographics",
-    "source": "UN 2023 estimate"
+    "sourceName": "UN 2023 estimate",
+    "sourceUrl": "https://population.un.org/wup/"
   },
   {
     "id": "days-in-year",
@@ -85,7 +95,8 @@
     "answer": 365,
     "unit": "days",
     "category": "astronomy",
-    "source": "Astronomical calculations"
+    "sourceName": "Astronomical calculations",
+    "sourceUrl": "https://spaceplace.nasa.gov/years-on-other-planets/en/"
   },
   {
     "id": "boiling-water",
@@ -93,7 +104,8 @@
     "answer": 100,
     "unit": "°C",
     "category": "chemistry",
-    "source": "Physical chemistry"
+    "sourceName": "Physical chemistry",
+    "sourceUrl": "https://www.engineeringtoolbox.com/boiling-point-water-d_926.html"
   },
   {
     "id": "piano-keys",
@@ -101,7 +113,8 @@
     "answer": 88,
     "unit": "keys",
     "category": "music",
-    "source": "Piano standards"
+    "sourceName": "Piano standards",
+    "sourceUrl": "https://www.britannica.com/art/piano"
   },
   {
     "id": "wwii-end",
@@ -109,7 +122,8 @@
     "answer": 1945,
     "unit": "year",
     "category": "history",
-    "source": "Historical records"
+    "sourceName": "Historical records",
+    "sourceUrl": "https://www.britannica.com/event/World-War-II"
   },
   {
     "id": "amazon-length",
@@ -117,7 +131,8 @@
     "answer": 6400,
     "unit": "km",
     "category": "geography",
-    "source": "Geographic surveys"
+    "sourceName": "Geographic surveys",
+    "sourceUrl": "https://www.britannica.com/place/Amazon-River"
   },
   {
     "id": "sun-distance",
@@ -125,7 +140,8 @@
     "answer": 150,
     "unit": "million km",
     "category": "astronomy",
-    "source": "NASA"
+    "sourceName": "NASA",
+    "sourceUrl": "https://solarsystem.nasa.gov/solar-system/sun/overview/"
   },
   {
     "id": "periodic-elements",
@@ -133,7 +149,8 @@
     "answer": 118,
     "unit": "elements",
     "category": "chemistry",
-    "source": "IUPAC"
+    "sourceName": "IUPAC",
+    "sourceUrl": "https://iupac.org/what-we-do/periodic-table-of-elements/"
   },
   {
     "id": "sahara-area",
@@ -141,7 +158,8 @@
     "answer": 9,
     "unit": "million km²",
     "category": "geography",
-    "source": "Geographic data"
+    "sourceName": "Geographic data",
+    "sourceUrl": "https://www.britannica.com/place/Sahara-desert-Africa"
   },
   {
     "id": "mona-lisa-year",
@@ -149,7 +167,8 @@
     "answer": 1503,
     "unit": "year",
     "category": "art",
-    "source": "Art historians"
+    "sourceName": "Art historians",
+    "sourceUrl": "https://www.louvre.fr/en/explore/the-palace/from-the-mona-lisa-to-the-wedding-at-cana"
   },
   {
     "id": "human-chromosomes",
@@ -157,7 +176,8 @@
     "answer": 46,
     "unit": "chromosomes",
     "category": "biology",
-    "source": "Genetics textbooks"
+    "sourceName": "Genetics textbooks",
+    "sourceUrl": "https://medlineplus.gov/genetics/understanding/basics/chromosome/"
   },
   {
     "id": "sound-speed",
@@ -165,7 +185,8 @@
     "answer": 343,
     "unit": "m/s",
     "category": "physics",
-    "source": "Physics textbooks"
+    "sourceName": "Physics textbooks",
+    "sourceUrl": "https://www.engineeringtoolbox.com/speed-sound-d_519.html"
   },
   {
     "id": "mars-distance",
@@ -173,7 +194,8 @@
     "answer": 55,
     "unit": "million km",
     "category": "astronomy",
-    "source": "NASA"
+    "sourceName": "NASA",
+    "sourceUrl": "https://mars.nasa.gov/all-about-mars/night-sky/close-approach/"
   },
   {
     "id": "empire-state-floors",
@@ -181,7 +203,8 @@
     "answer": 102,
     "unit": "floors",
     "category": "architecture",
-    "source": "Building specifications"
+    "sourceName": "Building specifications",
+    "sourceUrl": "https://www.esbnyc.com/about/facts-figures"
   },
   {
     "id": "un-founding",
@@ -189,7 +212,8 @@
     "answer": 1945,
     "unit": "year",
     "category": "history",
-    "source": "UN official records"
+    "sourceName": "UN official records",
+    "sourceUrl": "https://www.un.org/en/about-us/history-of-the-un"
   },
   {
     "id": "great-wall-length",
@@ -197,7 +221,8 @@
     "answer": 21196,
     "unit": "km",
     "category": "architecture",
-    "source": "Chinese archaeological survey 2012"
+    "sourceName": "Chinese archaeological survey 2012",
+    "sourceUrl": "https://whc.unesco.org/en/list/438/"
   },
   {
     "id": "nile-length",
@@ -205,7 +230,8 @@
     "answer": 6650,
     "unit": "km",
     "category": "geography",
-    "source": "Geographic surveys"
+    "sourceName": "Geographic surveys",
+    "sourceUrl": "https://www.britannica.com/place/Nile-River"
   },
   {
     "id": "wright-first-flight",
@@ -213,7 +239,8 @@
     "answer": 1903,
     "unit": "year",
     "category": "history",
-    "source": "Historical records"
+    "sourceName": "Historical records",
+    "sourceUrl": "https://www.nps.gov/wrbr/learn/historyculture/thefirstflight.htm"
   },
   {
     "id": "heart-rate",
@@ -221,7 +248,8 @@
     "answer": 70,
     "unit": "bpm",
     "category": "biology",
-    "source": "Medical guidelines"
+    "sourceName": "Medical guidelines",
+    "sourceUrl": "https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/all-about-heart-rate-pulse"
   },
   {
     "id": "pacific-depth",
@@ -229,7 +257,8 @@
     "answer": 10994,
     "unit": "m",
     "category": "geography",
-    "source": "NOAA"
+    "sourceName": "NOAA",
+    "sourceUrl": "https://oceanservice.noaa.gov/facts/oceandepth.html"
   },
   {
     "id": "apollo-11-year",
@@ -237,7 +266,8 @@
     "answer": 1969,
     "unit": "year",
     "category": "history",
-    "source": "NASA records"
+    "sourceName": "NASA records",
+    "sourceUrl": "https://www.nasa.gov/mission_pages/apollo/apollo-11.html"
   },
   {
     "id": "water-freeze",
@@ -245,7 +275,8 @@
     "answer": 0,
     "unit": "°C",
     "category": "chemistry",
-    "source": "Physical chemistry"
+    "sourceName": "Physical chemistry",
+    "sourceUrl": "https://www.engineeringtoolbox.com/water-properties-d_1258.html"
   },
   {
     "id": "hubble-launch",
@@ -253,7 +284,8 @@
     "answer": 1990,
     "unit": "year",
     "category": "astronomy",
-    "source": "NASA"
+    "sourceName": "NASA",
+    "sourceUrl": "https://www.nasa.gov/mission_pages/hubble/story/index.html"
   },
   {
     "id": "russia-population",
@@ -261,7 +293,8 @@
     "answer": 144,
     "unit": "million",
     "category": "demographics",
-    "source": "UN estimates"
+    "sourceName": "UN estimates",
+    "sourceUrl": "https://population.un.org/wpp/"
   },
   {
     "id": "mozart-death",
@@ -269,7 +302,8 @@
     "answer": 1791,
     "unit": "year",
     "category": "history",
-    "source": "Historical records"
+    "sourceName": "Historical records",
+    "sourceUrl": "https://www.britannica.com/biography/Wolfgang-Amadeus-Mozart"
   },
   {
     "id": "light-year-km",
@@ -277,7 +311,8 @@
     "answer": 9,
     "unit": "trillion km",
     "category": "astronomy",
-    "source": "Astronomical calculations"
+    "sourceName": "Astronomical calculations",
+    "sourceUrl": "https://www.space.com/light-year.html"
   },
   {
     "id": "statue-liberty-height",
@@ -285,7 +320,8 @@
     "answer": 93,
     "unit": "m",
     "category": "architecture",
-    "source": "National Park Service"
+    "sourceName": "National Park Service",
+    "sourceUrl": "https://www.nps.gov/stli/learn/historyculture/statue-statistics.htm"
   },
   {
     "id": "earth-age",
@@ -293,7 +329,8 @@
     "answer": 4.5,
     "unit": "billion years",
     "category": "geology",
-    "source": "Scientific consensus"
+    "sourceName": "Scientific consensus",
+    "sourceUrl": "https://www.usgs.gov/faqs/how-old-earth"
   },
   {
     "id": "bermuda-triangle-area",
@@ -301,7 +338,8 @@
     "answer": 1500,
     "unit": "thousand km²",
     "category": "geography",
-    "source": "Geographic estimates"
+    "sourceName": "Geographic estimates",
+    "sourceUrl": "https://oceanservice.noaa.gov/facts/bermudatri.html"
   },
   {
     "id": "olympic-rings",
@@ -309,7 +347,8 @@
     "answer": 5,
     "unit": "rings",
     "category": "sports",
-    "source": "International Olympic Committee"
+    "sourceName": "International Olympic Committee",
+    "sourceUrl": "https://olympics.com/ioc/olympic-rings"
   },
   {
     "id": "berlin-wall-fall",
@@ -317,7 +356,8 @@
     "answer": 1989,
     "unit": "year",
     "category": "history",
-    "source": "Historical records"
+    "sourceName": "Historical records",
+    "sourceUrl": "https://www.britannica.com/topic/Berlin-Wall"
   },
   {
     "id": "jupiter-moons",
@@ -325,7 +365,8 @@
     "answer": 95,
     "unit": "moons",
     "category": "astronomy",
-    "source": "NASA/IAU"
+    "sourceName": "NASA/IAU",
+    "sourceUrl": "https://science.nasa.gov/jupiter/moons/"
   },
   {
     "id": "colosseum-capacity",
@@ -333,7 +374,8 @@
     "answer": 50,
     "unit": "thousand",
     "category": "history",
-    "source": "Archaeological estimates"
+    "sourceName": "Archaeological estimates",
+    "sourceUrl": "https://www.britannica.com/topic/Colosseum"
   },
   {
     "id": "fahrenheit-451",
@@ -341,7 +383,8 @@
     "answer": 451,
     "unit": "°F",
     "category": "science",
-    "source": "Ray Bradbury's research"
+    "sourceName": "Ray Bradbury's research",
+    "sourceUrl": "https://www.britannica.com/topic/Fahrenheit-451"
   },
   {
     "id": "hawaii-islands",
@@ -349,7 +392,8 @@
     "answer": 8,
     "unit": "islands",
     "category": "geography",
-    "source": "Geographic data"
+    "sourceName": "Geographic data",
+    "sourceUrl": "https://www.hawaii.gov/hawaiifacts/"
   },
   {
     "id": "gutenberg-bible",
@@ -357,6 +401,7 @@
     "answer": 1455,
     "unit": "year",
     "category": "history",
-    "source": "Historical records"
+    "sourceName": "Historical records",
+    "sourceUrl": "https://www.britannica.com/topic/Gutenberg-Bible"
   }
 ]

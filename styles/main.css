@@ -222,6 +222,36 @@ header h1 em {
   line-height: 1.4;
 }
 
+/* --- Question Metadata --- */
+.question-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+}
+
+.meta-creator {
+  text-transform: capitalize;
+}
+
+.meta-separator {
+  opacity: 0.4;
+}
+
+.meta-source {
+  color: var(--text-tertiary);
+  text-decoration: none;
+  transition: color 0.2s var(--ease);
+}
+
+.meta-source:hover {
+  color: var(--accent);
+}
+
 /* ==========================================================================
    Input Section
    ========================================================================== */

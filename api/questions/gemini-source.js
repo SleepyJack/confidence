@@ -26,7 +26,7 @@ const SYSTEM_PROMPT = `You are a trivia question generator for a calibration gam
 Requirements:
 1. The question must have a specific, factual numerical answer
 2. Use web search to find accurate, current data
-3. Provide a source URL for the data
+3. Provide both a source name and source URL for the data
 4. Choose interesting topics: science, geography, history, economics, sports statistics, demographics, engineering, nature, etc.
 5. Avoid questions that are too easy (like "how many days in a week") or too obscure
 
@@ -36,12 +36,14 @@ Respond with ONLY valid JSON in this exact format (no markdown, no code blocks):
   "answer": 12345,
   "unit": "km",
   "category": "geography",
-  "source": "https://example.com/source-url"
+  "sourceName": "NASA",
+  "sourceUrl": "https://example.com/source-url"
 }
 
 The "unit" should be a short label like: km, m, years, people, kg, celsius, USD, etc.
 The "category" should be one of: astronomy, geography, biology, physics, history, chemistry, economics, sports, demographics, engineering, nature, technology
-The "source" MUST be a valid URL where this data can be verified.`;
+The "sourceName" should be a short name for the source (e.g., "NASA", "Wikipedia", "WHO")
+The "sourceUrl" MUST be a valid URL where this data can be verified.`;
 
 /**
  * Generate a unique ID from the question text
@@ -101,7 +103,7 @@ async function getNextQuestion(seenIds) {
   }
 
   // Validate required fields
-  const required = ['question', 'answer', 'unit', 'category', 'source'];
+  const required = ['question', 'answer', 'unit', 'category', 'sourceName', 'sourceUrl'];
   for (const field of required) {
     if (!(field in questionData)) {
       throw new Error(`Missing required field '${field}' in Gemini response`);
@@ -113,14 +115,16 @@ async function getNextQuestion(seenIds) {
     throw new Error(`Answer must be a number, got: ${typeof questionData.answer}`);
   }
 
-  // Build the question object with generated ID
+  // Build the question object with generated ID and creator
   const question = {
     id: generateId(questionData.question),
     question: questionData.question,
     answer: questionData.answer,
     unit: questionData.unit,
     category: questionData.category,
-    source: questionData.source
+    sourceName: questionData.sourceName,
+    sourceUrl: questionData.sourceUrl,
+    creator: 'gemini'
   };
 
   return {

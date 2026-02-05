@@ -32,7 +32,13 @@ function getNextQuestion(seenIds) {
 
   // Pick from unseen if available, otherwise full pool (implicit reset)
   const pool = unseen.length > 0 ? unseen : allQuestions;
-  const question = pool[Math.floor(Math.random() * pool.length)];
+  const baseQuestion = pool[Math.floor(Math.random() * pool.length)];
+
+  // Add creator field (set by app, not from JSON)
+  const question = {
+    ...baseQuestion,
+    creator: 'human'
+  };
 
   return {
     question,

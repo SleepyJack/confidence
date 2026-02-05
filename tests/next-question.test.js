@@ -42,7 +42,10 @@ describe('next-question', () => {
     expect(r.status).toHaveBeenCalledWith(200);
 
     const { question, poolReset } = r.json.mock.calls[0][0];
-    expect(mockQuestions).toContainEqual(question);
+    // Check the returned question matches one from the pool (ignoring added creator field)
+    const { creator, ...questionWithoutCreator } = question;
+    expect(mockQuestions).toContainEqual(questionWithoutCreator);
+    expect(creator).toBe('human');
     expect(poolReset).toBe(false);
   });
 
@@ -60,7 +63,10 @@ describe('next-question', () => {
     await handler(req('GET', { seen: 'q1,q2,q3' }), r);
 
     const { question, poolReset } = r.json.mock.calls[0][0];
-    expect(mockQuestions).toContainEqual(question); // still returns *a* question
+    // Check the returned question matches one from the pool (ignoring added creator field)
+    const { creator, ...questionWithoutCreator } = question;
+    expect(mockQuestions).toContainEqual(questionWithoutCreator); // still returns *a* question
+    expect(creator).toBe('human');
     expect(poolReset).toBe(true);
   });
 
@@ -83,6 +89,7 @@ describe('next-question', () => {
     expect(question).toHaveProperty('answer');
     expect(question).toHaveProperty('unit');
     expect(question).toHaveProperty('category');
+    expect(question).toHaveProperty('creator');
   });
 
   test('returns 500 when questions file is empty', async () => {

@@ -13,6 +13,8 @@ const UI = {
     this.elements = {
       questionText: document.getElementById('question-text'),
       questionCategory: document.getElementById('question-category'),
+      questionCreator: document.getElementById('question-creator'),
+      questionSource: document.getElementById('question-source'),
       lowInput: document.getElementById('low-input'),
       highInput: document.getElementById('high-input'),
       confidenceSlider: document.getElementById('confidence-slider'),
@@ -109,6 +111,16 @@ const UI = {
     // Update category eyebrow
     if (this.elements.questionCategory) {
       this.elements.questionCategory.textContent = question.category || 'Question';
+    }
+
+    // Update creator and source metadata
+    if (this.elements.questionCreator) {
+      const creatorLabel = question.creator === 'gemini' ? 'AI generated' : 'Human curated';
+      this.elements.questionCreator.textContent = creatorLabel;
+    }
+    if (this.elements.questionSource && question.sourceName && question.sourceUrl) {
+      this.elements.questionSource.textContent = question.sourceName;
+      this.elements.questionSource.href = question.sourceUrl;
     }
 
     // Reset inputs
