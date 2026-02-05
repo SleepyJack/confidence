@@ -95,6 +95,6 @@ describe('next-question', () => {
     const r = res();
     await emptyHandler(req('GET'), r);
     expect(r.status).toHaveBeenCalledWith(500);
-    expect(r.json).toHaveBeenCalledWith({ error: 'No questions available' });
+    expect(r.json).toHaveBeenCalledWith({ error: 'No questions available in JSON source' });
   });
 });

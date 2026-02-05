@@ -1,0 +1,7 @@
+{
+  "version": "0.1.12",
+  "questionSource": "json",
+  "gemini": {
+    "model": "gemini-2.5-flash"
+  }
+}

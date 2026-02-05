@@ -10,12 +10,12 @@ function initApp() {
     // Initialize UI
     UI.init();
 
-    // Version display — non-blocking, reads from version.txt
-    fetch('version.txt')
-      .then(r => r.text())
-      .then(v => {
+    // Version display — non-blocking, reads from config.json
+    fetch('config.json')
+      .then(r => r.json())
+      .then(config => {
         const el = document.getElementById('version-info');
-        if (el) el.textContent = `v${v.trim()}`;
+        if (el && config.version) el.textContent = `v${config.version}`;
       })
       .catch(() => {});
 
