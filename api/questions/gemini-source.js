@@ -66,9 +66,12 @@ function generateId(question) {
 async function getNextQuestion(seenIds) {
   const client = getClient();
 
+  // Get the model name from environment or default
+  const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
   // Get the model with grounding enabled
   const model = client.getGenerativeModel({
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    model: modelName,
     // Enable grounding with Google Search
     tools: [{
       googleSearch: {}
@@ -124,7 +127,7 @@ async function getNextQuestion(seenIds) {
     category: questionData.category,
     sourceName: questionData.sourceName,
     sourceUrl: questionData.sourceUrl,
-    creator: 'gemini'
+    creator: modelName
   };
 
   return {

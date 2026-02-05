@@ -37,7 +37,7 @@ function getNextQuestion(seenIds) {
   // Add creator field (set by app, not from JSON)
   const question = {
     ...baseQuestion,
-    creator: 'human'
+    creator: 'claude'
   };
 
   return {

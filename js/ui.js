@@ -115,8 +115,8 @@ const UI = {
 
     // Update creator and source metadata
     if (this.elements.questionCreator) {
-      const creatorLabel = question.creator === 'gemini' ? 'AI generated' : 'Human curated';
-      this.elements.questionCreator.textContent = creatorLabel;
+      // Display creator: model name for AI-generated, 'claude' for JSON source
+      this.elements.questionCreator.textContent = question.creator || 'unknown';
     }
     if (this.elements.questionSource && question.sourceName && question.sourceUrl) {
       this.elements.questionSource.textContent = question.sourceName;
