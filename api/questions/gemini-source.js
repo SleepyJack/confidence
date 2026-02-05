@@ -4,6 +4,18 @@
  */
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const fs = require('fs');
+const path = require('path');
+
+// Load config
+let config = null;
+function getConfig() {
+  if (!config) {
+    const configPath = path.join(process.cwd(), 'config.json');
+    config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  }
+  return config;
+}
 
 // Initialize client (API key from environment)
 let genAI = null;
@@ -66,8 +78,9 @@ function generateId(question) {
 async function getNextQuestion(seenIds) {
   const client = getClient();
 
-  // Get the model name from environment or default
-  const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  // Get the model name: env var overrides config, which has a default fallback
+  const cfg = getConfig();
+  const modelName = process.env.GEMINI_MODEL || cfg.gemini?.model || 'gemini-2.5-flash';
 
   // Get the model with grounding enabled
   const model = client.getGenerativeModel({
