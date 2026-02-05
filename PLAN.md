@@ -12,7 +12,7 @@ All of the following has been implemented and is live:
 
 - Single-page vanilla JS app, modular architecture (`game.js`, `scoring.js`, `ui.js`, `chart.js`, `distribution.js`, `storage.js`)
 - 45 curated questions in `data/questions.json`
-- Range input (low/high) + confidence slider (50-99%)
+- Range input (low/high) + confidence slider (50–99%)
 - Immediate feedback with bell curve distribution visualization
 - Two metrics: Precision Score (log scoring + EMA) and Over/Under Confidence (EMA)
 - Both charts show raw scatter points + smoothed EMA line
@@ -26,7 +26,7 @@ All of the following has been implemented and is live:
 |------|----------|
 | Scoring | Logarithmic scoring with normal distribution (proper scoring rule) |
 | Averaging | EMA (α=0.3) replaces simple mean — rewards improvement, reduces noise |
-| Confidence range | 50-99% — below 50% is illogical ("my range is probably wrong") |
+| Confidence range | 50–99% — below 50% is illogical ("my range is probably wrong") |
 | Distribution model | Normal over uniform — more intuitive, prettier, rewards precision |
 | Calibration Bias metric | Dropped — replaced by Over/Under Confidence Score |
 | Chart library | Chart.js for time-series, custom canvas for distribution viz |
@@ -34,7 +34,7 @@ All of the following has been implemented and is live:
 
 ---
 
-## Phase A — API Seam — Complete ✓
+## Phase 1: API Seam — Complete ✓
 
 The `/api/next-question` pattern is wired up. The frontend calls one endpoint; the serverless function reads from `questions.json`. Behaviour is identical to before, but the seam is in place — swapping in AI generation later is a single-file change on the server side.
 
@@ -44,30 +44,41 @@ The `/api/next-question` pattern is wired up. The frontend calls one endpoint; t
 
 ---
 
-## Next Up: Phase B — AI Generation
-- Batch-generate questions on first request (or on a cron schedule)
+## Phase 2: AI Question Generation
+
+Generate questions dynamically using an AI model with web search grounding.
+
+### 2a: Core Integration — In Progress
+- Gemini integration with Google Search grounding for fact verification
+- Config-driven question source routing (`config.json`)
+- Question schema: `id`, `question`, `answer`, `unit`, `category`, `sourceName`, `sourceUrl`, `creator`
+- Creator field tracks origin (e.g., `claude`, `gemini-2.5-flash`)
+
+### 2b: Production Hardening
+- Batch-generate questions on first request or cron schedule
 - Cache generated questions (Vercel KV or in-memory)
-- Serve from the pool — don't generate per-request (slow + expensive)
+- Serve from pool — don't generate per-request (slow + expensive)
 - Replenish pool when it runs low
 
-**Phase C — Polish**
+### 2c: Quality & Variety
 - Mix static seed questions with AI-generated ones
 - Category-aware generation (enforce diversity, prevent drift)
-- Validation strategy for generated questions (see below)
+- Validation strategy for generated questions (see design notes below)
 
-### AI Question Generation — Design Considerations
+### AI Question Generation — Design Notes
 
 **What makes a good estimation question?**
 - Single, verifiable numerical answer
-- Interesting / surprising answer
+- Interesting or surprising answer
 - Covers a range of magnitudes and domains
 - Not trivially Googleable mid-game
 
-**Validation is the hard part.** If Claude generates a question with an answer, how do we know it's right? Options (roughly in order of preference):
-1. Ask the model twice independently, flag disagreements
-2. Stick to well-known factual domains where the model is reliable
-3. Human review queue for flagged questions
-4. Trust the AI and rely on user reporting to catch errors
+**Validation is the hard part.** If the model generates a question with an answer, how do we know it's right? Options (roughly in order of preference):
+1. Use web search grounding to cite sources
+2. Ask the model twice independently, flag disagreements
+3. Stick to well-known factual domains where the model is reliable
+4. Human review queue for flagged questions
+5. Trust the AI and rely on user reporting to catch errors
 
 **Duplicate prevention:**
 - Provide recent questions in the prompt as negative examples
@@ -81,9 +92,9 @@ The `/api/next-question` pattern is wired up. The frontend calls one endpoint; t
 
 ---
 
-## Phase 2: User Persistence & Auth
+## Phase 3: User Persistence & Auth
 
-Once question generation is working, the next meaningful step is moving user data out of localStorage.
+Move user data out of localStorage into a proper backend.
 
 ### Stack Addition: Supabase
 
@@ -106,9 +117,9 @@ localStorage data can be migrated on first login: read from localStorage, POST t
 
 ---
 
-## Phase 3: Multi-User Platform
+## Phase 4: Multi-User Platform
 
-Further out. The existing PLAN had detailed schemas and generation strategies here — the key ideas are preserved below.
+Further out. Key ideas preserved below.
 
 ### Question Lifecycle
 
@@ -145,13 +156,31 @@ answeredAt, responseTimeMs
 
 ---
 
+## Parallel Track: Analytics Dashboard
+
+A separate frontend for operational visibility. Can begin alongside Phase 2 and evolve with later phases.
+
+### Metrics to Track
+- Total questions generated (by source/model)
+- Total questions answered (by user, over time)
+- Usage rates and trends (daily/weekly active users)
+- Question quality signals (avg score, report rate, skip rate)
+- Popular categories and difficulty distribution
+
+### Implementation Notes
+- Requires backend storage (Phase 3+) for meaningful data
+- Could start with simple JSON logs, graduate to proper analytics
+- Separate route (`/admin` or `/dashboard`) with basic auth
+- Lightweight charting (Chart.js reuse or simple tables)
+
+---
+
 ## Open Questions
 
-1. **Which AI model for generation?** Claude (more careful, better at following constraints) vs GPT-4 (larger ecosystem, potentially cheaper at scale)?
-2. **Validation strategy?** How much do we trust AI-generated answers? What's the user reporting flow?
-3. **Question difficulty?** Do we want adaptive difficulty, or just a random mix? Could be interesting to track per-category difficulty from response data.
-4. **Monetization?** Not a priority now, but worth keeping in mind — freemium, ads, or "pay for unlimited questions"?
-5. **Multi-language?** Punt for now, but Supabase + serverless makes i18n relatively straightforward later.
+1. **Validation strategy?** How much do we trust AI-generated answers? What's the user reporting flow?
+2. **Question difficulty?** Adaptive difficulty, or random mix? Could track per-category difficulty from response data.
+3. **Monetization?** Not a priority now — freemium, ads, or "pay for unlimited questions"?
+4. **Multi-language?** Punt for now, but Supabase + serverless makes i18n relatively straightforward later.
 
 ---
 
@@ -159,8 +188,8 @@ answeredAt, responseTimeMs
 
 | Risk | Mitigation |
 |------|-----------|
-| AI generates wrong answers | Dual-generation check + user reporting + human review queue |
+| AI generates wrong answers | Web search grounding + user reporting + human review queue |
 | Question pool runs dry | Batch generation triggered when pool < threshold |
-| localStorage data lost | Accept for now; cloud sync in Phase 2 handles long-term |
+| localStorage data lost | Accept for now; cloud sync in Phase 3 handles long-term |
 | Vercel cold starts slow | Serverless functions warm up fast; cache questions in memory |
 | Cost of AI generation | Batch generation + aggressive caching + reuse across users |
