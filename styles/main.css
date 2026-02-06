@@ -225,8 +225,8 @@ header h1 em {
 /* --- Question Metadata --- */
 .question-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
   margin-top: 12px;
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -234,12 +234,16 @@ header h1 em {
   letter-spacing: 0.02em;
 }
 
+.meta-label {
+  color: var(--text-tertiary);
+}
+
 .meta-creator {
-  text-transform: capitalize;
+  font-weight: 500;
 }
 
 .meta-separator {
-  opacity: 0.4;
+  color: var(--text-tertiary);
 }
 
 .meta-source {

@@ -14,7 +14,10 @@ const UI = {
       questionText: document.getElementById('question-text'),
       questionCategory: document.getElementById('question-category'),
       questionCreator: document.getElementById('question-creator'),
-      questionSource: document.getElementById('question-source'),
+      feedbackQuestionText: document.getElementById('feedback-question-text'),
+      feedbackCategory: document.getElementById('feedback-category'),
+      feedbackCreator: document.getElementById('feedback-creator'),
+      feedbackSource: document.getElementById('feedback-source'),
       lowInput: document.getElementById('low-input'),
       highInput: document.getElementById('high-input'),
       confidenceSlider: document.getElementById('confidence-slider'),
@@ -113,14 +116,9 @@ const UI = {
       this.elements.questionCategory.textContent = question.category || 'Question';
     }
 
-    // Update creator and source metadata
+    // Update creator (source is shown only after submission)
     if (this.elements.questionCreator) {
-      // Display creator: model name for AI-generated, 'claude' for JSON source
       this.elements.questionCreator.textContent = question.creator || 'unknown';
-    }
-    if (this.elements.questionSource && question.sourceName && question.sourceUrl) {
-      this.elements.questionSource.textContent = question.sourceName;
-      this.elements.questionSource.href = question.sourceUrl;
     }
 
     // Reset inputs
@@ -202,6 +200,20 @@ const UI = {
   showFeedback() {
     if (!this.currentAnswer) return;
 
+    const q = Game.currentQuestion;
+
+    // Populate question info in feedback view (with source revealed)
+    this.elements.feedbackQuestionText.textContent = q.question;
+    this.elements.feedbackCategory.textContent = q.category || 'Question';
+    this.elements.feedbackCreator.textContent = q.creator || 'unknown';
+    if (q.sourceName && q.sourceUrl) {
+      this.elements.feedbackSource.textContent = q.sourceName;
+      this.elements.feedbackSource.href = q.sourceUrl;
+    } else {
+      this.elements.feedbackSource.textContent = 'unknown';
+      this.elements.feedbackSource.removeAttribute('href');
+    }
+
     // Hide question, show feedback
     this.elements.questionContainer.classList.remove('active');
     this.elements.feedbackContainer.classList.add('active');
@@ -215,7 +227,6 @@ const UI = {
     this.elements.feedbackText.className = 'feedback-message ' + (isCorrect ? 'correct' : 'incorrect');
 
     // Show correct answer
-    const q = Game.currentQuestion;
     this.elements.correctAnswer.textContent =
       `The correct answer is: ${q.answer} ${q.unit}`;
 

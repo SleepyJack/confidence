@@ -34,9 +34,7 @@
           <div class="question-section">
             <h2 id="question-text">Loading question...</h2>
             <div class="question-meta">
-              <span id="question-creator" class="meta-creator"></span>
-              <span class="meta-separator">&bull;</span>
-              <a id="question-source" class="meta-source" href="#" target="_blank" rel="noopener"></a>
+              <span class="meta-label">Question created by </span><span id="question-creator" class="meta-creator"></span>
             </div>
           </div>
 
@@ -82,6 +80,17 @@
 
         <!-- Feedback Container -->
         <div id="feedback-container" class="card">
+          <div class="card-eyebrow">
+            <span class="category-dot"></span>
+            <span id="feedback-category">Question</span>
+          </div>
+          <div class="question-section">
+            <h2 id="feedback-question-text"></h2>
+            <div class="question-meta">
+              <span class="meta-label">Question created by </span><span id="feedback-creator" class="meta-creator"></span><span class="meta-separator"> · data sourced from </span><a id="feedback-source" class="meta-source" href="#" target="_blank" rel="noopener"></a>
+            </div>
+          </div>
+
           <div class="feedback-section">
             <div id="feedback-text" class="feedback-message"></div>
             <div class="answer-detail">
