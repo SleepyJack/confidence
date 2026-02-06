@@ -85,22 +85,27 @@ async function validateSourceUrl(url) {
       return false;
     }
 
-    // Make a HEAD request with timeout
+    // Use GET (not HEAD — many servers handle HEAD inconsistently)
+    // Abort as soon as we get the status code to avoid downloading the body
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timer = setTimeout(() => controller.abort(), 5000);
 
-    const response = await fetch(url, {
-      method: 'HEAD',
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Calibrate-Bot/1.0 (source-verification)'
-      }
-    });
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; Calibrate-Bot/1.0)'
+        }
+      });
 
-    clearTimeout(timeout);
+      // Got the status — abort the body download
+      controller.abort();
 
-    // Accept 2xx and 3xx status codes
-    return response.status >= 200 && response.status < 400;
+      return response.status >= 200 && response.status < 400;
+    } finally {
+      clearTimeout(timer);
+    }
   } catch (error) {
     console.warn(`Source URL validation failed for ${url}:`, error.message);
     return false;
