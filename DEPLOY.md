@@ -29,17 +29,17 @@ No env vars are required for Phase A (static questions only). When AI generation
 
 The release workflow is: bump version → tag → CI deploys.
 
-1. Update `version.txt` in `main` with the new version (e.g. `0.2.0`)
+1. Update `version` in `config.json` (e.g. `"version": "0.2.0"`)
 2. Commit and push to `main`
 3. Tag that commit: `git tag v0.2.0 && git push origin v0.2.0`
-4. GitHub Actions picks up the tag, checks it matches `version.txt`, and fast-forwards `live` to that commit
+4. GitHub Actions picks up the tag, checks it matches `config.json`, and fast-forwards `live` to that commit
 5. Vercel sees the push to `live` and deploys
 
-The version number shown in the app footer reads from `version.txt` at runtime, so it updates automatically.
+The version number shown in the app footer reads from `config.json` at runtime, so it updates automatically.
 
-**Tag format:** `v` prefix on the tag, no prefix in the file. Tag `v0.2.0`, file contains `0.2.0`.
+**Tag format:** `v` prefix on the tag, no prefix in the config. Tag `v0.2.0`, config contains `"version": "0.2.0"`.
 
-**If the tag doesn't match `version.txt`:** CI fails at the validation step. Nothing deploys. Fix by either updating `version.txt` and re-tagging, or deleting the bad tag (`git push origin :v0.2.0`) and re-tagging.
+**If the tag doesn't match `config.json`:** CI fails at the validation step. Nothing deploys. Fix by either updating `config.json` and re-tagging, or deleting the bad tag (`git push origin :v0.2.0`) and re-tagging.
 
 ---
 

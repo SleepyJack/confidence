@@ -45,7 +45,7 @@ describe('next-question', () => {
     // Check the returned question matches one from the pool (ignoring added creator field)
     const { creator, ...questionWithoutCreator } = question;
     expect(mockQuestions).toContainEqual(questionWithoutCreator);
-    expect(creator).toBe('claude');
+    expect(creator).toBe('demo (claude)');
     expect(poolReset).toBe(false);
   });
 
@@ -66,7 +66,7 @@ describe('next-question', () => {
     // Check the returned question matches one from the pool (ignoring added creator field)
     const { creator, ...questionWithoutCreator } = question;
     expect(mockQuestions).toContainEqual(questionWithoutCreator); // still returns *a* question
-    expect(creator).toBe('claude');
+    expect(creator).toBe('demo (claude)');
     expect(poolReset).toBe(true);
   });
 

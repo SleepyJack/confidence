@@ -16,29 +16,38 @@ const Game = {
   /**
    * Fetch the next question from the API.
    * Sends seen IDs so the server can avoid repeats.
+   * @returns {Promise<{question: object, usedFallback?: boolean, fallbackReason?: string}>}
    */
   async getNextQuestion() {
-    try {
-      const params = this.seenQuestions.length > 0
-        ? '?seen=' + this.seenQuestions.join(',')
-        : '';
-      const response = await fetch('/api/next-question' + params);
-      if (!response.ok) throw new Error('API returned ' + response.status);
+    const params = this.seenQuestions.length > 0
+      ? '?seen=' + this.seenQuestions.join(',')
+      : '';
+    const response = await fetch('/api/next-question' + params);
+    const data = await response.json();
 
-      const data = await response.json();
-
-      // Server signals pool exhaustion — clear seen list for next round
-      if (data.poolReset) {
-        this.seenQuestions = [];
-        Storage.clearSeenQuestions();
+    if (!response.ok) {
+      // Build detailed error message from API response
+      let errorMsg = data.error || `API returned ${response.status}`;
+      if (data.primaryError) {
+        errorMsg = data.primaryError;
       }
-
-      this.currentQuestion = data.question;
-      return this.currentQuestion;
-    } catch (error) {
-      console.error('Failed to fetch question:', error);
-      return null;
+      throw new Error(errorMsg);
     }
+
+    // Server signals pool exhaustion — clear seen list for next round
+    if (data.poolReset) {
+      this.seenQuestions = [];
+      Storage.clearSeenQuestions();
+    }
+
+    this.currentQuestion = data.question;
+
+    // Return question with metadata
+    return {
+      question: this.currentQuestion,
+      usedFallback: data.usedFallback || false,
+      fallbackReason: data.fallbackReason
+    };
   },
 
   /**

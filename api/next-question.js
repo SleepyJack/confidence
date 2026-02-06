@@ -27,32 +27,59 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const cfg = getConfig();
-    const sourceName = cfg.questionSource || 'json';
+  const cfg = getConfig();
+  const sourceName = cfg.questionSource || 'json';
 
-    // Validate source exists
-    if (!sources[sourceName]) {
-      return res.status(500).json({
-        error: `Unknown question source: ${sourceName}. Valid options: ${Object.keys(sources).join(', ')}`
-      });
-    }
-
-    // Get the source module
-    const source = sources[sourceName]();
-
-    // Parse seen IDs from query string: ?seen=id1,id2,id3
-    const seenParam = req.query.seen || '';
-    const seenIds = new Set(seenParam ? seenParam.split(',') : []);
-
-    // Get next question from the source
-    const result = await source.getNextQuestion(seenIds);
-
-    res.status(200).json(result);
-  } catch (error) {
-    console.error('Error getting next question:', error);
-    res.status(500).json({
-      error: error.message || 'Failed to get next question'
+  // Validate source exists
+  if (!sources[sourceName]) {
+    return res.status(500).json({
+      error: `Unknown question source: ${sourceName}. Valid options: ${Object.keys(sources).join(', ')}`
     });
   }
+
+  // Parse seen IDs from query string: ?seen=id1,id2,id3
+  const seenParam = req.query.seen || '';
+  const seenIds = new Set(seenParam ? seenParam.split(',') : []);
+
+  // Try primary source, fall back to json on failure
+  let result;
+  let usedFallback = false;
+  let primaryError = null;
+
+  try {
+    const source = sources[sourceName]();
+    result = await source.getNextQuestion(seenIds);
+  } catch (error) {
+    primaryError = error;
+    console.error(`Primary source (${sourceName}) failed:`, error.message);
+
+    // If primary source wasn't json, try json as fallback
+    if (sourceName !== 'json') {
+      try {
+        console.log('Falling back to json source');
+        const fallbackSource = sources.json();
+        result = await fallbackSource.getNextQuestion(seenIds);
+        usedFallback = true;
+      } catch (fallbackError) {
+        console.error('Fallback source also failed:', fallbackError.message);
+        return res.status(500).json({
+          error: 'All question sources failed',
+          primaryError: primaryError.message,
+          fallbackError: fallbackError.message
+        });
+      }
+    } else {
+      // Primary was json and it failed, no fallback available
+      return res.status(500).json({
+        error: error.message || 'Failed to get next question'
+      });
+    }
+  }
+
+  // Include metadata about the response
+  res.status(200).json({
+    ...result,
+    usedFallback,
+    ...(usedFallback && { fallbackReason: primaryError?.message })
+  });
 };

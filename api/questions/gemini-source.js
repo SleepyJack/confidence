@@ -72,6 +72,41 @@ function generateId(question) {
     + '-' + Date.now().toString(36);
 }
 
+/**
+ * Validate that a source URL is reachable (returns 2xx or 3xx)
+ * @param {string} url - The URL to validate
+ * @returns {Promise<boolean>} - True if URL is valid
+ */
+async function validateSourceUrl(url) {
+  try {
+    // Basic URL format check
+    const parsed = new URL(url);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return false;
+    }
+
+    // Make a HEAD request with timeout
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const response = await fetch(url, {
+      method: 'HEAD',
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Calibrate-Bot/1.0 (source-verification)'
+      }
+    });
+
+    clearTimeout(timeout);
+
+    // Accept 2xx and 3xx status codes
+    return response.status >= 200 && response.status < 400;
+  } catch (error) {
+    console.warn(`Source URL validation failed for ${url}:`, error.message);
+    return false;
+  }
+}
+
 const MAX_RETRIES = 3;
 
 /**
@@ -123,6 +158,12 @@ async function attemptGeneration(model, modelName) {
   // Validate answer is a number
   if (typeof questionData.answer !== 'number') {
     throw new Error(`Answer must be a number, got: ${typeof questionData.answer}`);
+  }
+
+  // Validate source URL is reachable
+  const isValidUrl = await validateSourceUrl(questionData.sourceUrl);
+  if (!isValidUrl) {
+    throw new Error(`Source URL is not reachable: ${questionData.sourceUrl}`);
   }
 
   // Build the question object with generated ID and creator

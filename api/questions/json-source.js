@@ -34,10 +34,10 @@ function getNextQuestion(seenIds) {
   const pool = unseen.length > 0 ? unseen : allQuestions;
   const baseQuestion = pool[Math.floor(Math.random() * pool.length)];
 
-  // Add creator field (set by app, not from JSON)
+  // Add creator field to indicate demo mode
   const question = {
     ...baseQuestion,
-    creator: 'claude'
+    creator: 'demo (claude)'
   };
 
   return {

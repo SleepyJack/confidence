@@ -171,10 +171,17 @@ const UI = {
     this.showLoading('Generating your question');
 
     try {
-      const question = await Game.getNextQuestion();
-      if (!question) {
+      const result = await Game.getNextQuestion();
+      if (!result || !result.question) {
         this.showError('No question available', 'The question pool may be empty');
         return;
+      }
+
+      const { question, usedFallback, fallbackReason } = result;
+
+      // Log fallback usage for debugging
+      if (usedFallback) {
+        console.log('Used fallback question source:', fallbackReason);
       }
 
       // Hide loading, prepare question view

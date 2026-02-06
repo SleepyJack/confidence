@@ -27,14 +27,14 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Validate tag matches version.txt
+      - name: Validate tag matches config.json version
         run: |
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
-          FILE_VERSION=$(cat version.txt | tr -d '[:space:]')
-          echo "Tag:  v${TAG_VERSION}"
-          echo "File: ${FILE_VERSION}"
+          FILE_VERSION=$(node -p "require('./config.json').version")
+          echo "Tag:    v${TAG_VERSION}"
+          echo "Config: ${FILE_VERSION}"
           if [ "${TAG_VERSION}" != "${FILE_VERSION}" ]; then
-            echo "ERROR: tag v${TAG_VERSION} does not match version.txt (${FILE_VERSION})"
+            echo "ERROR: tag v${TAG_VERSION} does not match config.json version (${FILE_VERSION})"
             exit 1
           fi
 
