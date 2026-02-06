@@ -3,6 +3,7 @@
 * Clean up version.txt if it's deprecated by config.json
 * Rename the 'source' in the static questions.json to say something like `demo (claude)` so it's easy to tell when it's not doing live gen
 * Fallback to `demo` questions if live response fails with retries
+* Give more feedback from `next question` API to front end. If it fails, say why at least.
 * Do some sanity checking of the sources gemeni provides
     * Check that it's a live site (200 response)
     * Try to find the answer figure in the page's HTML
