@@ -1,6 +1,6 @@
 {
   "version": "0.1.12",
-  "questionSource": "json",
+  "questionSource": "gemini",
   "gemini": {
     "model": "gemini-2.5-flash"
   }

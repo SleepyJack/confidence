@@ -25,6 +25,43 @@
     <div class="main-content">
       <!-- Left side: Question/Feedback -->
       <div class="game-area">
+        <!-- Loading Container -->
+        <div id="loading-container" class="card loading-card">
+          <div class="loading-content">
+            <div class="orbital-loader">
+              <div class="orbit orbit-1"><div class="dot"></div></div>
+              <div class="orbit orbit-2"><div class="dot"></div></div>
+              <div class="orbit orbit-3"><div class="dot"></div></div>
+              <div class="core"></div>
+            </div>
+            <div class="loading-text">
+              <span id="loading-status" class="status-message">Generating your question</span>
+              <span class="status-dots"><span>.</span><span>.</span><span>.</span></span>
+            </div>
+            <p id="loading-detail" class="status-detail"></p>
+          </div>
+        </div>
+
+        <!-- Error Container -->
+        <div id="error-container" class="card error-card">
+          <div class="error-content">
+            <div class="error-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <circle cx="12" cy="16" r="0.5" fill="currentColor"/>
+              </svg>
+            </div>
+            <h3 class="error-title">Generation Failed</h3>
+            <p id="error-message" class="error-message">Unable to generate question</p>
+            <p id="error-detail" class="error-detail"></p>
+            <button id="retry-btn" class="btn btn-primary">
+              Try Again
+              <span class="btn-arrow">&rarr;</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Question Container -->
         <div id="question-container" class="card">
           <div class="card-eyebrow">
@@ -33,9 +70,7 @@
           </div>
           <div class="question-section">
             <h2 id="question-text">Loading question...</h2>
-            <div class="question-meta">
-              <span class="meta-label">Question created by </span><span id="question-creator" class="meta-creator"></span>
-            </div>
+            <p class="question-meta">Question created by <span id="question-creator" class="meta-creator"></span></p>
           </div>
 
           <div class="input-section">
@@ -86,9 +121,7 @@
           </div>
           <div class="question-section">
             <h2 id="feedback-question-text"></h2>
-            <div class="question-meta">
-              <span class="meta-label">Question created by </span><span id="feedback-creator" class="meta-creator"></span><span class="meta-separator"> · data sourced from </span><a id="feedback-source" class="meta-source" href="#" target="_blank" rel="noopener"></a>
-            </div>
+            <p class="question-meta">Question created by <span id="feedback-creator" class="meta-creator"></span> · data sourced from <a id="feedback-source" class="meta-source" href="#" target="_blank" rel="noopener"></a></p>
           </div>
 
           <div class="feedback-section">

@@ -5,38 +5,53 @@
 const UI = {
   elements: {},
   currentAnswer: null,
+  isLoading: false,
 
   /**
    * Initialize UI elements
    */
   init() {
     this.elements = {
+      // Question view
       questionText: document.getElementById('question-text'),
       questionCategory: document.getElementById('question-category'),
       questionCreator: document.getElementById('question-creator'),
+      questionContainer: document.getElementById('question-container'),
+      // Feedback view
       feedbackQuestionText: document.getElementById('feedback-question-text'),
       feedbackCategory: document.getElementById('feedback-category'),
       feedbackCreator: document.getElementById('feedback-creator'),
       feedbackSource: document.getElementById('feedback-source'),
+      feedbackContainer: document.getElementById('feedback-container'),
+      feedbackText: document.getElementById('feedback-text'),
+      correctAnswer: document.getElementById('correct-answer'),
+      questionScore: document.getElementById('question-score'),
+      // Loading view
+      loadingContainer: document.getElementById('loading-container'),
+      loadingStatus: document.getElementById('loading-status'),
+      loadingDetail: document.getElementById('loading-detail'),
+      // Error view
+      errorContainer: document.getElementById('error-container'),
+      errorMessage: document.getElementById('error-message'),
+      errorDetail: document.getElementById('error-detail'),
+      retryBtn: document.getElementById('retry-btn'),
+      // Inputs
       lowInput: document.getElementById('low-input'),
       highInput: document.getElementById('high-input'),
       confidenceSlider: document.getElementById('confidence-slider'),
       confidenceValue: document.getElementById('confidence-value'),
       submitBtn: document.getElementById('submit-btn'),
       nextBtn: document.getElementById('next-btn'),
-      questionContainer: document.getElementById('question-container'),
-      feedbackContainer: document.getElementById('feedback-container'),
-      feedbackText: document.getElementById('feedback-text'),
-      correctAnswer: document.getElementById('correct-answer'),
-      questionScore: document.getElementById('question-score'),
       validationMessage: document.getElementById('validation-message'),
       distributionCanvas: document.getElementById('distribution-canvas'),
+      // Stats
       statsTotalLabel: document.getElementById('stats-total-label'),
       statsScore: document.getElementById('stats-score'),
       statsConfidenceBias: document.getElementById('stats-confidence-bias'),
       statsConfidenceStatus: document.getElementById('stats-confidence-status'),
       chartCanvas: document.getElementById('chart-canvas'),
       confidenceBiasChartCanvas: document.getElementById('confidence-bias-chart-canvas'),
+      // Modal
       welcomeModal: document.getElementById('welcome-modal'),
       startBtn: document.getElementById('start-btn'),
       resetBtn: document.getElementById('reset-btn')
@@ -76,6 +91,9 @@ const UI = {
     // Reset button
     this.elements.resetBtn.addEventListener('click', () => this.handleReset());
 
+    // Retry button
+    this.elements.retryBtn.addEventListener('click', () => this.loadNewQuestion());
+
     // Enter key in inputs
     [this.elements.lowInput, this.elements.highInput].forEach(input => {
       input.addEventListener('keypress', (e) => {
@@ -95,49 +113,111 @@ const UI = {
    * Hide welcome modal and start game
    */
   async handleStart() {
+    this.elements.startBtn.disabled = true;
     this.elements.welcomeModal.classList.remove('active');
     await this.loadNewQuestion();
+    this.elements.startBtn.disabled = false;
+  },
+
+  /**
+   * Hide all game area containers
+   */
+  hideAllContainers() {
+    this.elements.questionContainer.classList.remove('active');
+    this.elements.feedbackContainer.classList.remove('active');
+    this.elements.loadingContainer.classList.remove('active');
+    this.elements.errorContainer.classList.remove('active');
+  },
+
+  /**
+   * Show loading state with status message
+   */
+  showLoading(status = 'Generating your question', detail = '') {
+    this.hideAllContainers();
+    this.elements.loadingStatus.textContent = status;
+    this.elements.loadingDetail.textContent = detail;
+    this.elements.loadingContainer.classList.add('active');
+    this.elements.nextBtn.disabled = true;
+  },
+
+  /**
+   * Update loading status message
+   */
+  updateLoadingStatus(status, detail = '') {
+    this.elements.loadingStatus.textContent = status;
+    this.elements.loadingDetail.textContent = detail;
+  },
+
+  /**
+   * Show error state with message
+   */
+  showError(message = 'Unable to generate question', detail = '') {
+    this.hideAllContainers();
+    this.elements.errorMessage.textContent = message;
+    this.elements.errorDetail.textContent = detail;
+    this.elements.errorContainer.classList.add('active');
+    this.elements.nextBtn.disabled = false;
   },
 
   /**
    * Load and display a new question
    */
   async loadNewQuestion() {
-    const question = await Game.getNextQuestion();
-    if (!question) {
-      this.showError('Failed to load questions');
-      return;
+    // Prevent concurrent loads
+    if (this.isLoading) return;
+    this.isLoading = true;
+
+    // Show loading state
+    this.showLoading('Generating your question');
+
+    try {
+      const question = await Game.getNextQuestion();
+      if (!question) {
+        this.showError('No question available', 'The question pool may be empty');
+        return;
+      }
+
+      // Hide loading, prepare question view
+      this.hideAllContainers();
+
+      this.elements.questionText.textContent = question.question;
+
+      // Update category eyebrow
+      if (this.elements.questionCategory) {
+        this.elements.questionCategory.textContent = question.category || 'Question';
+      }
+
+      // Update creator (source is shown only after submission)
+      if (this.elements.questionCreator) {
+        this.elements.questionCreator.textContent = question.creator || 'unknown';
+      }
+
+      // Reset inputs
+      this.elements.lowInput.value = '';
+      this.elements.highInput.value = '';
+      this.elements.confidenceSlider.value = 80;
+      this.elements.confidenceValue.textContent = '80%';
+
+      // Show question container
+      this.hideValidation();
+      this.elements.questionContainer.classList.add('active');
+      this.elements.submitBtn.disabled = false;
+
+      // Focus on first input
+      this.elements.lowInput.focus();
+
+      // Update stats
+      this.updateStats();
+    } catch (error) {
+      console.error('Failed to load question:', error);
+      this.showError(
+        'Failed to generate question',
+        error.message || 'An unexpected error occurred'
+      );
+    } finally {
+      this.isLoading = false;
+      this.elements.nextBtn.disabled = false;
     }
-
-    this.elements.questionText.textContent = question.question;
-
-    // Update category eyebrow
-    if (this.elements.questionCategory) {
-      this.elements.questionCategory.textContent = question.category || 'Question';
-    }
-
-    // Update creator (source is shown only after submission)
-    if (this.elements.questionCreator) {
-      this.elements.questionCreator.textContent = question.creator || 'unknown';
-    }
-
-    // Reset inputs
-    this.elements.lowInput.value = '';
-    this.elements.highInput.value = '';
-    this.elements.confidenceSlider.value = 80;
-    this.elements.confidenceValue.textContent = '80%';
-
-    // Show question, hide feedback
-    this.hideValidation();
-    this.elements.questionContainer.classList.add('active');
-    this.elements.feedbackContainer.classList.remove('active');
-    this.elements.submitBtn.disabled = false;
-
-    // Focus on first input
-    this.elements.lowInput.focus();
-
-    // Update stats
-    this.updateStats();
   },
 
   /**
@@ -214,8 +294,8 @@ const UI = {
       this.elements.feedbackSource.removeAttribute('href');
     }
 
-    // Hide question, show feedback
-    this.elements.questionContainer.classList.remove('active');
+    // Hide all containers, show feedback
+    this.hideAllContainers();
     this.elements.feedbackContainer.classList.add('active');
 
     // Display result
@@ -320,12 +400,5 @@ const UI = {
       this.updateStats();
       this.showWelcome();
     }
-  },
-
-  /**
-   * Show error message
-   */
-  showError(message) {
-    alert('Error: ' + message);
   }
 };

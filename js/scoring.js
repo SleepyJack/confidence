@@ -67,33 +67,35 @@ const Scoring = {
   },
 
   /**
-   * Calculate log score for a single answer using normal distribution
-   * Returns a log score (typically -10 to -0.1, where higher is better)
+   * Calculate log score for a single answer using z-score (scale-invariant)
+   * Returns a log score (0 = perfect, negative = worse, where higher is better)
+   * Based on log of relative likelihood: log(exp(-z²/2)) = -z²/2
    */
   calculateLogScore(userLow, userHigh, confidence, correctAnswer) {
     const rangeWidth = userHigh - userLow;
 
     // Prevent division by zero
-    if (rangeWidth <= 0) return -10; // Worst possible score
+    if (rangeWidth <= 0) return this.LOG_SCORE_FLOOR;
 
     // Get normal distribution parameters
     const {mean, sigma} = this.getNormalParams(userLow, userHigh, confidence);
 
-    // Calculate probability density at the correct answer
-    let density = this.normalPDF(correctAnswer, mean, sigma);
+    // Calculate z-score (how many standard deviations from mean)
+    // This is scale-invariant - same z whether working in billions or units
+    const z = (correctAnswer - mean) / sigma;
 
-    // Prevent log(0) or log(negative)
-    density = Math.max(density, 1e-10);
-
-    return Math.log(density);
+    // Log of relative likelihood: -z²/2
+    // z=0 (perfect center) → 0, z=1 → -0.5, z=2 → -2, z=3 → -4.5
+    return -(z * z) / 2;
   },
 
   /**
    * Calculate average log score across all answers
    * Individual scores are clamped to LOG_SCORE_FLOOR to prevent
    * a single extreme outlier from dominating the average.
+   * Floor of -8 corresponds to z ≈ 4 (very far from mean)
    */
-  LOG_SCORE_FLOOR: -12,
+  LOG_SCORE_FLOOR: -8,
   EMA_ALPHA: 0.3, // 30% new value, 70% old value
   EMA_ALPHA_FIRST: 0.6, // Double gain for first sample
   PRECISION_INITIAL: 50, // Initial precision score (%)
@@ -145,14 +147,16 @@ const Scoring = {
 
   /**
    * Normalize log score to 0-100% range (higher is better)
-   * Uses range [LOG_SCORE_FLOOR, -1] mapped to [0, 100]
+   * Uses range [LOG_SCORE_FLOOR, 0] mapped to [0, 100]
+   * 0 = perfect (answer at center of range), LOG_SCORE_FLOOR = worst
    */
   normalizeLogScore(logScore) {
     const floor = this.LOG_SCORE_FLOOR;
-    const clamped = Math.max(floor, Math.min(-1, logScore));
+    const ceiling = 0;
+    const clamped = Math.max(floor, Math.min(ceiling, logScore));
 
-    // Map [floor, -1] to [0, 100]
-    const normalized = ((clamped - floor) / (-1 - floor)) * 100;
+    // Map [floor, 0] to [0, 100]
+    const normalized = ((clamped - floor) / (ceiling - floor)) * 100;
 
     return normalized;
   },

@@ -37,22 +37,24 @@ const SYSTEM_PROMPT = `You are a trivia question generator for a calibration gam
 
 Requirements:
 1. The question must have a specific, factual numerical answer
-2. Use web search to find accurate, current data
-3. Provide both a source name and source URL for the data
-4. Choose interesting topics: science, geography, history, economics, sports statistics, demographics, engineering, nature, etc.
-5. Avoid questions that are too easy (like "how many days in a week") or too obscure
+2. The question text MUST specify the unit of measurement (e.g., "in kilometers", "in millions of people", "in degrees Celsius")
+3. Use web search to find accurate, current data
+4. Provide both a source name and source URL for the data
+5. Choose interesting topics: science, geography, history, economics, sports statistics, demographics, engineering, nature, etc.
+6. Avoid questions that are too easy (like "how many days in a week") or too obscure
 
 Respond with ONLY valid JSON in this exact format (no markdown, no code blocks):
 {
-  "question": "Your question here?",
-  "answer": 12345,
+  "question": "What is the average distance from Earth to the Moon in kilometers?",
+  "answer": 384400,
   "unit": "km",
-  "category": "geography",
+  "category": "astronomy",
   "sourceName": "NASA",
   "sourceUrl": "https://example.com/source-url"
 }
 
-The "unit" should be a short label like: km, m, years, people, kg, celsius, USD, etc.
+The "question" MUST include the unit (e.g., "in kilometers", "in years", "in USD").
+The "unit" should be a short label matching the unit in the question: km, m, years, people, kg, celsius, USD, etc.
 The "category" should be one of: astronomy, geography, biology, physics, history, chemistry, economics, sports, demographics, engineering, nature, technology
 The "sourceName" should be a short name for the source (e.g., "NASA", "Wikipedia", "WHO")
 The "sourceUrl" MUST be a valid URL where this data can be verified.`;
@@ -70,30 +72,12 @@ function generateId(question) {
     + '-' + Date.now().toString(36);
 }
 
+const MAX_RETRIES = 3;
+
 /**
- * Get next question from Gemini
- * @param {Set<string>} seenIds - Set of question IDs already seen (unused for Gemini, always generates new)
- * @returns {Promise<{question: object, poolReset: boolean}>}
+ * Attempt a single question generation
  */
-async function getNextQuestion(seenIds) {
-  const client = getClient();
-
-  // Get the model name from config
-  const cfg = getConfig();
-  const modelName = cfg.gemini?.model;
-  if (!modelName) {
-    throw new Error('gemini.model not configured in config.json');
-  }
-
-  // Get the model with grounding enabled
-  const model = client.getGenerativeModel({
-    model: modelName,
-    // Enable grounding with Google Search
-    tools: [{
-      googleSearch: {}
-    }]
-  });
-
+async function attemptGeneration(model, modelName) {
   const result = await model.generateContent({
     contents: [{
       role: 'user',
@@ -101,11 +85,18 @@ async function getNextQuestion(seenIds) {
     }],
     generationConfig: {
       temperature: 1.0,  // Higher temperature for variety
-      maxOutputTokens: 500
+      maxOutputTokens: 2048
     }
   });
 
   const response = result.response;
+
+  // Check if response was truncated
+  const finishReason = response.candidates?.[0]?.finishReason;
+  if (finishReason === 'MAX_TOKENS') {
+    throw new Error('Gemini response was truncated due to token limit');
+  }
+
   const text = response.text();
 
   // Parse the JSON response
@@ -135,7 +126,7 @@ async function getNextQuestion(seenIds) {
   }
 
   // Build the question object with generated ID and creator
-  const question = {
+  return {
     id: generateId(questionData.question),
     question: questionData.question,
     answer: questionData.answer,
@@ -145,11 +136,53 @@ async function getNextQuestion(seenIds) {
     sourceUrl: questionData.sourceUrl,
     creator: modelName
   };
+}
 
-  return {
-    question,
-    poolReset: false  // Never resets for Gemini (infinite questions)
-  };
+/**
+ * Get next question from Gemini
+ * @param {Set<string>} seenIds - Set of question IDs already seen (unused for Gemini, always generates new)
+ * @returns {Promise<{question: object, poolReset: boolean}>}
+ */
+async function getNextQuestion(seenIds) {
+  const client = getClient();
+
+  // Get the model name from config
+  const cfg = getConfig();
+  const modelName = cfg.gemini?.model;
+  if (!modelName) {
+    throw new Error('gemini.model not configured in config.json');
+  }
+
+  // Get the model with grounding enabled
+  const model = client.getGenerativeModel({
+    model: modelName,
+    // Enable grounding with Google Search
+    tools: [{
+      googleSearch: {}
+    }]
+  });
+
+  // Retry logic
+  let lastError;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const question = await attemptGeneration(model, modelName);
+      return {
+        question,
+        poolReset: false  // Never resets for Gemini (infinite questions)
+      };
+    } catch (error) {
+      lastError = error;
+      console.error(`Question generation attempt ${attempt}/${MAX_RETRIES} failed:`, error.message);
+      if (attempt < MAX_RETRIES) {
+        // Brief pause before retry
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+  }
+
+  // All retries exhausted
+  throw new Error('Failed to generate question. Please try again later.');
 }
 
 module.exports = { getNextQuestion };

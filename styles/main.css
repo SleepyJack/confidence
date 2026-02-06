@@ -194,16 +194,214 @@ header h1 em {
 }
 
 #question-container,
-#feedback-container {
+#feedback-container,
+#loading-container,
+#error-container {
   display: none;
   opacity: 0;
 }
 
 #question-container.active,
-#feedback-container.active {
+#feedback-container.active,
+#loading-container.active,
+#error-container.active {
   display: block;
   animation: fadeUp 0.4s var(--ease) both;
   opacity: 1;
+}
+
+/* ==========================================================================
+   Loading State
+   ========================================================================== */
+
+.loading-card {
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-content {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+/* --- Orbital Loader --- */
+.orbital-loader {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 32px;
+}
+
+.orbit {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+
+.orbit .dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  top: -4px;
+  left: 50%;
+  margin-left: -4px;
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.orbit-1 {
+  animation: orbit 2.4s linear infinite;
+}
+
+.orbit-2 {
+  inset: 12px;
+  animation: orbit 1.8s linear infinite reverse;
+}
+
+.orbit-2 .dot {
+  width: 6px;
+  height: 6px;
+  top: -3px;
+  margin-left: -3px;
+  opacity: 0.7;
+}
+
+.orbit-3 {
+  inset: 24px;
+  animation: orbit 2.8s linear infinite;
+}
+
+.orbit-3 .dot {
+  width: 4px;
+  height: 4px;
+  top: -2px;
+  margin-left: -2px;
+  opacity: 0.5;
+}
+
+.core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 20px var(--accent-glow);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.7; }
+}
+
+/* --- Loading Text --- */
+.loading-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+  margin-bottom: 8px;
+}
+
+.status-dots span {
+  animation: dotPulse 1.4s ease-in-out infinite;
+}
+
+.status-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.status-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dotPulse {
+  0%, 60%, 100% { opacity: 0.2; }
+  30% { opacity: 1; }
+}
+
+.status-detail {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+  min-height: 1.2em;
+}
+
+/* ==========================================================================
+   Error State
+   ========================================================================== */
+
+.error-card {
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error-content {
+  text-align: center;
+  padding: 48px 24px;
+  max-width: 320px;
+}
+
+.error-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 24px;
+  color: var(--error);
+  opacity: 0.9;
+}
+
+.error-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.error-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.error-message {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.error-detail {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+  margin-bottom: 24px;
+  min-height: 1.2em;
+}
+
+.error-card .btn {
+  margin-top: 8px;
 }
 
 /* ==========================================================================
@@ -224,9 +422,6 @@ header h1 em {
 
 /* --- Question Metadata --- */
 .question-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
   margin-top: 12px;
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -234,16 +429,8 @@ header h1 em {
   letter-spacing: 0.02em;
 }
 
-.meta-label {
-  color: var(--text-tertiary);
-}
-
 .meta-creator {
   font-weight: 500;
-}
-
-.meta-separator {
-  color: var(--text-tertiary);
 }
 
 .meta-source {

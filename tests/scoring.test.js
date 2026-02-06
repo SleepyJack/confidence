@@ -33,19 +33,19 @@ describe('isAnswerCorrect', () => {
 });
 
 // ---------------------------------------------------------------------------
-// normalizeLogScore  — maps [LOG_SCORE_FLOOR, -1] → [0, 100]
+// normalizeLogScore  — maps [LOG_SCORE_FLOOR, 0] → [0, 100]
 // ---------------------------------------------------------------------------
 describe('normalizeLogScore', () => {
-  test('floor (-12) maps to 0', () => {
-    expect(Scoring.normalizeLogScore(-12)).toBe(0);
+  test('floor (-8) maps to 0', () => {
+    expect(Scoring.normalizeLogScore(-8)).toBe(0);
   });
 
-  test('ceiling (-1) maps to 100', () => {
-    expect(Scoring.normalizeLogScore(-1)).toBe(100);
+  test('ceiling (0) maps to 100', () => {
+    expect(Scoring.normalizeLogScore(0)).toBe(100);
   });
 
-  test('midpoint (-6.5) maps to ~50', () => {
-    expect(Scoring.normalizeLogScore(-6.5)).toBeCloseTo(50);
+  test('midpoint (-4) maps to 50', () => {
+    expect(Scoring.normalizeLogScore(-4)).toBeCloseTo(50);
   });
 
   test('values below floor clamp to 0', () => {
@@ -53,7 +53,7 @@ describe('normalizeLogScore', () => {
   });
 
   test('values above ceiling clamp to 100', () => {
-    expect(Scoring.normalizeLogScore(0)).toBe(100);
+    expect(Scoring.normalizeLogScore(1)).toBe(100);
   });
 });
 
@@ -88,12 +88,12 @@ describe('getNormalParams', () => {
 // calculateLogScore
 // ---------------------------------------------------------------------------
 describe('calculateLogScore', () => {
-  test('zero-width range returns -10', () => {
-    expect(Scoring.calculateLogScore(50, 50, 80, 50)).toBe(-10);
+  test('zero-width range returns LOG_SCORE_FLOOR', () => {
+    expect(Scoring.calculateLogScore(50, 50, 80, 50)).toBe(Scoring.LOG_SCORE_FLOOR);
   });
 
-  test('negative-width range returns -10', () => {
-    expect(Scoring.calculateLogScore(60, 50, 80, 55)).toBe(-10);
+  test('negative-width range returns LOG_SCORE_FLOOR', () => {
+    expect(Scoring.calculateLogScore(60, 50, 80, 55)).toBe(Scoring.LOG_SCORE_FLOOR);
   });
 
   test('answer at centre scores higher than answer far away', () => {
@@ -102,10 +102,18 @@ describe('calculateLogScore', () => {
     expect(centre).toBeGreaterThan(far);
   });
 
-  test('tight correct range scores higher than wide correct range', () => {
-    const tight = Scoring.calculateLogScore(45, 55, 80, 50);
-    const wide  = Scoring.calculateLogScore(0, 100, 80, 50);
-    expect(tight).toBeGreaterThan(wide);
+  test('same proportional accuracy scores the same regardless of scale', () => {
+    // This is the key fix: scoring should be scale-invariant
+    // Range [1.4, 1.6] with answer 1.5 should score same as
+    // Range [1.4B, 1.6B] with answer 1.5B
+    const small = Scoring.calculateLogScore(1.4, 1.6, 90, 1.5);
+    const large = Scoring.calculateLogScore(1400000000, 1600000000, 90, 1500000000);
+    expect(small).toBeCloseTo(large, 5);
+  });
+
+  test('answer at center of range scores 100%', () => {
+    const score = Scoring.calculateLogScore(0, 100, 80, 50);
+    expect(score).toBeCloseTo(0); // z=0 → -z²/2 = 0 → normalizes to 100%
   });
 });
 
