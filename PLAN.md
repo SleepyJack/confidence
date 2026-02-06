@@ -80,10 +80,36 @@ Generate questions dynamically using an AI model with web search grounding.
 4. Human review queue for flagged questions
 5. Trust the AI and rely on user reporting to catch errors
 
-**Duplicate prevention:**
-- Provide recent questions in the prompt as negative examples
-- Hash exact question text to catch perfect duplicates
-- Semantic similarity check (embeddings) to catch near-duplicates
+**Duplicate prevention — two-phase generation:**
+
+Rather than generating full questions and then checking for duplicates (wasteful), use a lightweight two-phase approach:
+
+1. **Phase 1: Summary only** — Ask the AI for a minimal "summary" of the datum (max 10 words), e.g., "height of Mount Everest", "number of books in the Bible", "population of Tokyo". This is cheap (few tokens).
+
+2. **Similarity check** — Compare the summary against existing summaries in the DB. If a match or near-match is found, reject and request another summary. Repeat until unique.
+
+3. **Phase 2: Full question** — Only when the summary is confirmed unique, ask for the complete question + answer + metadata JSON.
+
+**Schema addition:** Each question gets a `summary` field (stored, indexed) containing the canonical short description of what's being asked.
+
+**Similarity algorithm options** (roughly in order of simplicity):
+
+| Algorithm | Pros | Cons |
+|-----------|------|------|
+| **Normalized Jaccard** | Simple, no dependencies, works on word sets | Misses word order, synonyms |
+| **Trigram similarity (pg_trgm)** | Built into PostgreSQL, battle-tested, fast with GIN index | Requires Supabase/Postgres |
+| **Levenshtein distance** | Good for typos, built into Postgres | Poor for semantic similarity |
+| **Embedding cosine similarity** | Best semantic matching | Requires embedding model, more complex |
+
+**Recommended approach:** Start with PostgreSQL's `pg_trgm` extension (available in Supabase). Use `similarity(a, b) > 0.4` or `word_similarity()` for fuzzy matching. It's well-tested, efficient with indexes, and handles variations like "Mt. Everest" vs "Mount Everest" reasonably well. Graduate to embeddings later if needed.
+
+```sql
+-- Example: find similar summaries
+SELECT id, summary, similarity(summary, 'height of Mount Everest') AS sim
+FROM questions
+WHERE similarity(summary, 'height of Mount Everest') > 0.4
+ORDER BY sim DESC;
+```
 
 **Cost control:**
 - Batch generation (20 questions per API call, not 1)
