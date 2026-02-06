@@ -1,7 +1,7 @@
 const mockQuestions = [
-  { id: 'q1', question: 'Question 1?', answer: 100, unit: 'm',  category: 'test' },
-  { id: 'q2', question: 'Question 2?', answer: 200, unit: 'kg', category: 'science' },
-  { id: 'q3', question: 'Question 3?', answer: 300, unit: 's',  category: 'geography' },
+  { id: 'q1', question: 'Question 1?', answer: 100, unit: 'm',  category: 'test', creator: 'demo (claude)' },
+  { id: 'q2', question: 'Question 2?', answer: 200, unit: 'kg', category: 'science', creator: 'demo (claude)' },
+  { id: 'q3', question: 'Question 3?', answer: 300, unit: 's',  category: 'geography', creator: 'demo (claude)' },
 ];
 
 // Helpers ---------------------------------------------------------------
@@ -42,10 +42,7 @@ describe('next-question', () => {
     expect(r.status).toHaveBeenCalledWith(200);
 
     const { question, poolReset } = r.json.mock.calls[0][0];
-    // Check the returned question matches one from the pool (ignoring added creator field)
-    const { creator, ...questionWithoutCreator } = question;
-    expect(mockQuestions).toContainEqual(questionWithoutCreator);
-    expect(creator).toBe('demo (claude)');
+    expect(mockQuestions).toContainEqual(question);
     expect(poolReset).toBe(false);
   });
 
@@ -63,10 +60,7 @@ describe('next-question', () => {
     await handler(req('GET', { seen: 'q1,q2,q3' }), r);
 
     const { question, poolReset } = r.json.mock.calls[0][0];
-    // Check the returned question matches one from the pool (ignoring added creator field)
-    const { creator, ...questionWithoutCreator } = question;
-    expect(mockQuestions).toContainEqual(questionWithoutCreator); // still returns *a* question
-    expect(creator).toBe('demo (claude)');
+    expect(mockQuestions).toContainEqual(question);
     expect(poolReset).toBe(true);
   });
 

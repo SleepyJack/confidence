@@ -32,13 +32,7 @@ function getNextQuestion(seenIds) {
 
   // Pick from unseen if available, otherwise full pool (implicit reset)
   const pool = unseen.length > 0 ? unseen : allQuestions;
-  const baseQuestion = pool[Math.floor(Math.random() * pool.length)];
-
-  // Add creator field to indicate demo mode
-  const question = {
-    ...baseQuestion,
-    creator: 'demo (claude)'
-  };
+  const question = pool[Math.floor(Math.random() * pool.length)];
 
   return {
     question,
