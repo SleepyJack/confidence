@@ -1,7 +1,7 @@
 /**
  * Next Question API - Router/Wrapper
  * Delegates to the appropriate question source based on config
- * Fallback chain: gemini -> kimi -> json
+ * Tries sources in order defined by questionSources in config.json
  */
 
 const fs = require('fs');
@@ -24,26 +24,19 @@ const sources = {
   kimi: () => require('./questions/kimi-source')
 };
 
-// Fallback chain: try these in order until one succeeds
-const FALLBACK_CHAIN = ['gemini', 'kimi', 'json'];
-
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const cfg = getConfig();
-  const primarySource = cfg.questionSource || 'gemini';
+
+  // Get source chain from config (default to json-only if not specified)
+  const chain = cfg.questionSources || ['json'];
 
   // Parse seen IDs from query string: ?seen=id1,id2,id3
   const seenParam = req.query.seen || '';
   const seenIds = new Set(seenParam ? seenParam.split(',') : []);
-
-  // Build the fallback chain starting from the configured primary source
-  const primaryIndex = FALLBACK_CHAIN.indexOf(primarySource);
-  const chain = primaryIndex >= 0
-    ? FALLBACK_CHAIN.slice(primaryIndex)
-    : [primarySource, ...FALLBACK_CHAIN.filter(s => s !== primarySource)];
 
   // Try each source in the chain
   let result;
