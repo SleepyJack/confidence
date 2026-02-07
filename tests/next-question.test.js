@@ -4,6 +4,10 @@ const mockQuestions = [
   { id: 'q3', question: 'Question 3?', answer: 300, unit: 's',  category: 'geography', creator: 'demo (claude)' },
 ];
 
+const mockConfig = {
+  questionSources: ['json']
+};
+
 // Helpers ---------------------------------------------------------------
 function req(method = 'GET', query = {}) {
   return { method, query };
@@ -16,14 +20,23 @@ function res() {
   return r;
 }
 
-// next-question.js caches questions at module scope, so we need a fresh
+function createFsMock(questions = mockQuestions, config = mockConfig) {
+  return {
+    readFileSync: jest.fn((filePath) => {
+      if (filePath.includes('config.json')) {
+        return JSON.stringify(config);
+      }
+      return JSON.stringify(questions);
+    }),
+  };
+}
+
+// next-question.js caches config at module scope, so we need a fresh
 // require for each test to avoid cross-test pollution.
 let handler;
 beforeEach(() => {
   jest.resetModules();
-  jest.doMock('fs', () => ({
-    readFileSync: jest.fn(() => JSON.stringify(mockQuestions)),
-  }));
+  jest.doMock('fs', () => createFsMock());
   handler = require('../api/next-question');
 });
 
@@ -86,11 +99,9 @@ describe('next-question', () => {
     expect(question).toHaveProperty('creator');
   });
 
-  test('returns 500 when all sources fail (incl. empty JSON fallback)', async () => {
+  test('returns 500 when all sources fail', async () => {
     jest.resetModules();
-    jest.doMock('fs', () => ({
-      readFileSync: jest.fn(() => JSON.stringify([])),
-    }));
+    jest.doMock('fs', () => createFsMock([], mockConfig));
     const emptyHandler = require('../api/next-question');
 
     const r = res();
@@ -100,5 +111,18 @@ describe('next-question', () => {
     const body = r.json.mock.calls[0][0];
     expect(body.error).toBe('All question sources failed');
     expect(body.errors).toContain('json: No questions available in JSON source');
+  });
+
+  test('returns 500 when questionSources not configured', async () => {
+    jest.resetModules();
+    jest.doMock('fs', () => createFsMock(mockQuestions, {}));
+    const badConfigHandler = require('../api/next-question');
+
+    const r = res();
+    await badConfigHandler(req('GET'), r);
+    expect(r.status).toHaveBeenCalledWith(500);
+    expect(r.json).toHaveBeenCalledWith({
+      error: 'questionSources not configured in config.json'
+    });
   });
 });

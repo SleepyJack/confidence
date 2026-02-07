@@ -30,9 +30,13 @@ module.exports = async function handler(req, res) {
   }
 
   const cfg = getConfig();
+  const chain = cfg.questionSources;
 
-  // Get source chain from config (default to json-only if not specified)
-  const chain = cfg.questionSources || ['json'];
+  if (!chain || !Array.isArray(chain) || chain.length === 0) {
+    return res.status(500).json({
+      error: 'questionSources not configured in config.json'
+    });
+  }
 
   // Parse seen IDs from query string: ?seen=id1,id2,id3
   const seenParam = req.query.seen || '';
