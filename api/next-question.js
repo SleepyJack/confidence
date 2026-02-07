@@ -1,6 +1,7 @@
 /**
  * Next Question API - Router/Wrapper
  * Delegates to the appropriate question source based on config
+ * Fallback chain: gemini -> kimi -> json
  */
 
 const fs = require('fs');
@@ -19,8 +20,12 @@ function getConfig() {
 // Question source modules (lazy loaded)
 const sources = {
   json: () => require('./questions/json-source'),
-  gemini: () => require('./questions/gemini-source')
+  gemini: () => require('./questions/gemini-source'),
+  kimi: () => require('./questions/kimi-source')
 };
+
+// Fallback chain: try these in order until one succeeds
+const FALLBACK_CHAIN = ['gemini', 'kimi', 'json'];
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -28,58 +33,59 @@ module.exports = async function handler(req, res) {
   }
 
   const cfg = getConfig();
-  const sourceName = cfg.questionSource || 'json';
-
-  // Validate source exists
-  if (!sources[sourceName]) {
-    return res.status(500).json({
-      error: `Unknown question source: ${sourceName}. Valid options: ${Object.keys(sources).join(', ')}`
-    });
-  }
+  const primarySource = cfg.questionSource || 'gemini';
 
   // Parse seen IDs from query string: ?seen=id1,id2,id3
   const seenParam = req.query.seen || '';
   const seenIds = new Set(seenParam ? seenParam.split(',') : []);
 
-  // Try primary source, fall back to json on failure
+  // Build the fallback chain starting from the configured primary source
+  const primaryIndex = FALLBACK_CHAIN.indexOf(primarySource);
+  const chain = primaryIndex >= 0
+    ? FALLBACK_CHAIN.slice(primaryIndex)
+    : [primarySource, ...FALLBACK_CHAIN.filter(s => s !== primarySource)];
+
+  // Try each source in the chain
   let result;
   let usedFallback = false;
-  let primaryError = null;
+  let fallbackReason = null;
+  const errors = [];
 
-  try {
-    const source = sources[sourceName]();
-    result = await source.getNextQuestion(seenIds);
-  } catch (error) {
-    primaryError = error;
-    console.error(`Primary source (${sourceName}) failed:`, error.message);
+  for (let i = 0; i < chain.length; i++) {
+    const sourceName = chain[i];
 
-    // If primary source wasn't json, try json as fallback
-    if (sourceName !== 'json') {
-      try {
-        console.log('Falling back to json source');
-        const fallbackSource = sources.json();
-        result = await fallbackSource.getNextQuestion(seenIds);
-        usedFallback = true;
-      } catch (fallbackError) {
-        console.error('Fallback source also failed:', fallbackError.message);
-        return res.status(500).json({
-          error: 'All question sources failed',
-          primaryError: primaryError.message,
-          fallbackError: fallbackError.message
-        });
-      }
-    } else {
-      // Primary was json and it failed, no fallback available
-      return res.status(500).json({
-        error: error.message || 'Failed to get next question'
-      });
+    // Skip sources that don't exist
+    if (!sources[sourceName]) {
+      console.warn(`Unknown source in chain: ${sourceName}`);
+      continue;
     }
+
+    try {
+      const source = sources[sourceName]();
+      result = await source.getNextQuestion(seenIds);
+      usedFallback = i > 0;
+      if (usedFallback && errors.length > 0) {
+        fallbackReason = errors[0].message;
+      }
+      break;  // Success, exit the chain
+    } catch (error) {
+      console.error(`Source '${sourceName}' failed:`, error.message);
+      errors.push({ source: sourceName, message: error.message });
+    }
+  }
+
+  // If no source succeeded, return error
+  if (!result) {
+    return res.status(500).json({
+      error: 'All question sources failed',
+      errors: errors.map(e => `${e.source}: ${e.message}`)
+    });
   }
 
   // Include metadata about the response
   res.status(200).json({
     ...result,
     usedFallback,
-    ...(usedFallback && { fallbackReason: primaryError?.message })
+    ...(usedFallback && { fallbackReason })
   });
 };

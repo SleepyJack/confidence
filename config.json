@@ -3,5 +3,8 @@
   "questionSource": "gemini",
   "gemini": {
     "model": "gemini-2.5-flash"
+  },
+  "kimi": {
+    "model": "kimi-k2.5"
   }
 }

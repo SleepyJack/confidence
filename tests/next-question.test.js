@@ -86,7 +86,7 @@ describe('next-question', () => {
     expect(question).toHaveProperty('creator');
   });
 
-  test('returns 500 when questions file is empty', async () => {
+  test('returns 500 when all sources fail (incl. empty JSON fallback)', async () => {
     jest.resetModules();
     jest.doMock('fs', () => ({
       readFileSync: jest.fn(() => JSON.stringify([])),
@@ -96,6 +96,9 @@ describe('next-question', () => {
     const r = res();
     await emptyHandler(req('GET'), r);
     expect(r.status).toHaveBeenCalledWith(500);
-    expect(r.json).toHaveBeenCalledWith({ error: 'No questions available in JSON source' });
+
+    const body = r.json.mock.calls[0][0];
+    expect(body.error).toBe('All question sources failed');
+    expect(body.errors).toContain('json: No questions available in JSON source');
   });
 });
