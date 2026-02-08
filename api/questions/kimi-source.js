@@ -19,6 +19,13 @@ function getConfig() {
 }
 
 /**
+ * Summary-only prompt for Phase 1 (cheap duplicate check)
+ */
+const SUMMARY_PROMPT = `Generate a brief summary (max 10 words) of an interesting numerical trivia datum.
+Examples: "depth of the Mariana Trench", "population of Tokyo", "speed of light in km/s"
+Respond with ONLY the summary text, nothing else.`;
+
+/**
  * System prompt for question generation
  */
 const SYSTEM_PROMPT = `You are a trivia question generator for a calibration game. Generate a single trivia question that has a NUMERICAL answer.
@@ -36,6 +43,7 @@ Respond with ONLY valid JSON in this exact format (no markdown, no code blocks):
   "answer": 384400,
   "unit": "km",
   "category": "astronomy",
+  "summary": "average distance from Earth to the Moon",
   "sourceName": "NASA",
   "sourceUrl": "https://example.com/source-url"
 }
@@ -43,6 +51,7 @@ Respond with ONLY valid JSON in this exact format (no markdown, no code blocks):
 The "question" MUST include the unit (e.g., "in kilometers", "in years", "in USD").
 The "unit" should be a short label matching the unit in the question: km, m, years, people, kg, celsius, USD, etc.
 The "category" should be one of: astronomy, geography, biology, physics, history, chemistry, economics, sports, demographics, engineering, nature, technology
+The "summary" should be a brief (max 10 words) description of the core datum, e.g. "depth of the Mariana Trench".
 The "sourceName" should be a short name for the source (e.g., "NASA", "Wikipedia", "WHO")
 The "sourceUrl" MUST be a valid URL where this data can be verified.`;
 
@@ -85,9 +94,71 @@ const MAX_RETRIES = 3;
 const KIMI_API_BASE = 'https://api.moonshot.cn/v1';
 
 /**
+ * Phase 1: Generate a summary-only candidate (cheap, few tokens)
+ */
+async function generateSummary(apiKey, modelName) {
+  const response = await fetch(`${KIMI_API_BASE}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: modelName,
+      messages: [
+        { role: 'system', content: SUMMARY_PROMPT },
+        { role: 'user', content: 'Generate a trivia topic summary.' }
+      ],
+      temperature: 0.6,
+      max_tokens: 64
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Kimi API error (${response.status})`);
+  }
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  if (!text || text.length > 200 || text.startsWith('{')) {
+    return null;
+  }
+  return text;
+}
+
+/**
+ * Check if a summary is a duplicate of an existing question via Supabase RPC
+ * @returns {{ duplicate: boolean, match?: { id: string, summary: string, sim: number } }}
+ */
+async function checkDuplicate(summary) {
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase.rpc('check_duplicate_summary', {
+      candidate: summary,
+      threshold: 0.4
+    });
+    if (error) {
+      console.warn('Duplicate check RPC failed:', error.message);
+      return { duplicate: false };
+    }
+    if (data && data.length > 0) {
+      return { duplicate: true, match: data[0] };
+    }
+    return { duplicate: false };
+  } catch (err) {
+    console.warn('Duplicate check failed:', err.message);
+    return { duplicate: false };
+  }
+}
+
+/**
  * Attempt a single question generation via Kimi API
  */
-async function attemptGeneration(apiKey, modelName) {
+async function attemptGeneration(apiKey, modelName, summary) {
+  const userMessage = summary
+    ? `Generate a trivia question about: ${summary}. Respond with JSON only.`
+    : 'Generate a trivia question with a numerical answer. Respond with JSON only.';
+
   const response = await fetch(`${KIMI_API_BASE}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -103,10 +174,10 @@ async function attemptGeneration(apiKey, modelName) {
         },
         {
           role: 'user',
-          content: 'Generate a trivia question with a numerical answer. Respond with JSON only.'
+          content: userMessage
         }
       ],
-      temperature: 0.6,  // Instant mode for faster responses
+      temperature: 0.6,
       max_tokens: 2048
     })
   });
@@ -143,7 +214,7 @@ async function attemptGeneration(apiKey, modelName) {
   }
 
   // Validate required fields
-  const required = ['question', 'answer', 'unit', 'category', 'sourceName', 'sourceUrl'];
+  const required = ['question', 'answer', 'unit', 'category', 'summary', 'sourceName', 'sourceUrl'];
   for (const field of required) {
     if (!(field in questionData)) {
       throw new Error(`Missing required field '${field}' in Kimi response`);
@@ -168,6 +239,7 @@ async function attemptGeneration(apiKey, modelName) {
     answer: questionData.answer,
     unit: questionData.unit,
     category: questionData.category,
+    summary: questionData.summary || summary,
     sourceName: questionData.sourceName,
     sourceUrl: questionData.sourceUrl,
     creator: modelName
@@ -190,33 +262,61 @@ async function getNextQuestion(seenIds) {
   const cfg = getConfig();
   const modelName = cfg.kimi?.model || 'kimi-k2.5';
 
-  // Retry logic
+  const shouldPersist = cfg.persistQuestions !== false;
+
+  // Retry logic — two-phase generation
   let lastError;
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const question = await attemptGeneration(apiKey, modelName);
-
-      // Persist to DB (non-blocking — failure is logged but doesn't break the request)
-      if (cfg.persistQuestions === false) {
-        // Skip persistence when disabled in config
-      } else try {
-        const supabase = getSupabase();
-        const { error: insertError } = await supabase.from('questions').insert({
-          id: question.id,
-          question: question.question,
-          answer: question.answer,
-          unit: question.unit,
-          category: question.category,
-          source_name: question.sourceName,
-          source_url: question.sourceUrl,
-          creator: question.creator,
-          status: 'active'
-        });
-        if (insertError) {
-          console.warn('Failed to persist question to DB:', insertError.message);
+      // Phase 1: Generate a cheap summary and check for duplicates
+      let summary = null;
+      if (shouldPersist) {
+        try {
+          summary = await generateSummary(apiKey, modelName);
+          if (summary) {
+            const { duplicate, match } = await checkDuplicate(summary);
+            if (duplicate) {
+              console.warn(
+                `Duplicate topic detected (attempt ${attempt}/${MAX_RETRIES}): "${summary}" ` +
+                `≈ "${match.summary}" (similarity: ${match.sim.toFixed(2)})`
+              );
+              throw new Error(`Duplicate topic: "${summary}"`);
+            }
+            console.log(`Phase 1 passed — unique summary: "${summary}"`);
+          }
+        } catch (phase1Error) {
+          if (phase1Error.message.startsWith('Duplicate topic:')) {
+            throw phase1Error;
+          }
+          console.warn('Phase 1 (summary) failed, proceeding without duplicate check:', phase1Error.message);
         }
-      } catch (dbError) {
-        console.warn('Failed to persist question to DB:', dbError.message);
+      }
+
+      // Phase 2: Generate the full question
+      const question = await attemptGeneration(apiKey, modelName, summary);
+
+      // Persist to DB
+      if (shouldPersist) {
+        try {
+          const supabase = getSupabase();
+          const { error: insertError } = await supabase.from('questions').insert({
+            id: question.id,
+            question: question.question,
+            answer: question.answer,
+            unit: question.unit,
+            category: question.category,
+            summary: question.summary,
+            source_name: question.sourceName,
+            source_url: question.sourceUrl,
+            creator: question.creator,
+            status: 'active'
+          });
+          if (insertError) {
+            console.warn('Failed to persist question to DB:', insertError.message);
+          }
+        } catch (dbError) {
+          console.warn('Failed to persist question to DB:', dbError.message);
+        }
       }
 
       return {
