@@ -4,8 +4,10 @@
  */
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { getClient: getSupabase } = require('../lib/supabase');
 
 // Load config
 let config = null;
@@ -58,19 +60,6 @@ The "unit" should be a short label matching the unit in the question: km, m, yea
 The "category" should be one of: astronomy, geography, biology, physics, history, chemistry, economics, sports, demographics, engineering, nature, technology
 The "sourceName" should be a short name for the source (e.g., "NASA", "Wikipedia", "WHO")
 The "sourceUrl" MUST be a valid URL where this data can be verified.`;
-
-/**
- * Generate a unique ID from the question text
- */
-function generateId(question) {
-  return question
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .split(/\s+/)
-    .slice(0, 4)
-    .join('-')
-    + '-' + Date.now().toString(36);
-}
 
 /**
  * Validate that a source URL is reachable (returns 2xx or 3xx)
@@ -171,9 +160,9 @@ async function attemptGeneration(model, modelName) {
     throw new Error(`Source URL is not reachable: ${questionData.sourceUrl}`);
   }
 
-  // Build the question object with generated ID and creator
+  // Build the question object with UUID and creator
   return {
-    id: generateId(questionData.question),
+    id: crypto.randomUUID(),
     question: questionData.question,
     answer: questionData.answer,
     unit: questionData.unit,
@@ -213,6 +202,30 @@ async function getNextQuestion(seenIds) {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const question = await attemptGeneration(model, modelName);
+
+      // Persist to DB (non-blocking — failure is logged but doesn't break the request)
+      if (cfg.persistQuestions === false) {
+        // Skip persistence when disabled in config
+      } else try {
+        const supabase = getSupabase();
+        const { error: insertError } = await supabase.from('questions').insert({
+          id: question.id,
+          question: question.question,
+          answer: question.answer,
+          unit: question.unit,
+          category: question.category,
+          source_name: question.sourceName,
+          source_url: question.sourceUrl,
+          creator: question.creator,
+          status: 'active'
+        });
+        if (insertError) {
+          console.warn('Failed to persist question to DB:', insertError.message);
+        }
+      } catch (dbError) {
+        console.warn('Failed to persist question to DB:', dbError.message);
+      }
+
       return {
         question,
         poolReset: false  // Never resets for Gemini (infinite questions)

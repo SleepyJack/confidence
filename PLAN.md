@@ -48,11 +48,17 @@ The `/api/next-question` pattern is wired up. The frontend calls one endpoint; t
 
 Generate questions dynamically using an AI model with web search grounding.
 
-### 2a: Core Integration — In Progress
+### 2a: Core Integration — Complete ✓
 - Gemini integration with Google Search grounding for fact verification
 - Config-driven question source routing (`config.json`)
 - Question schema: `id`, `question`, `answer`, `unit`, `category`, `sourceName`, `sourceUrl`, `creator`
 - Creator field tracks origin (e.g., `claude`, `gemini-2.5-flash`)
+- **Questions database**: Supabase PostgreSQL backend (`api/lib/supabase.js`, `api/questions/db-source.js`)
+  - AI-generated questions persisted to DB on creation (non-blocking)
+  - DB serves as fallback source (replaces json-source in the default config chain)
+  - Schema includes `pg_trgm` index on `summary` column for future duplicate detection
+  - UUID primary keys (replacing slug-based IDs)
+  - json-source remains available — add `"json"` to config for local dev without Supabase
 
 ### 2b: Production Hardening
 - Batch-generate questions on first request or cron schedule
