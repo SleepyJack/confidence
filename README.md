@@ -36,13 +36,19 @@ The game tracks your performance across all questions and calculates:
 
 ## Tech Stack
 
-- Frontend: HTML, CSS, JavaScript (vanilla or lightweight framework)
-- Storage: Browser localStorage (MVP), with future option for user accounts and database
-- Questions: Static JSON file (MVP), with future option for AI-generated questions
+- **Frontend**: HTML, CSS, vanilla JavaScript
+- **Backend**: Vercel serverless functions (`api/`)
+- **Database**: Supabase (Postgres) — schema in `sql/schema.sql`
+- **Question generation**: Google Gemini API
+- **Hosting**: Vercel (deploys from `live` branch)
 
 ## Getting Started
 
-(Instructions will be added as development progresses)
+1. Clone the repo and run `npm install`
+2. Set up a Supabase project — see [docs/supabase-setup.md](docs/supabase-setup.md)
+3. Set environment variables (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`)
+4. Run locally with `vercel dev`
+5. Run tests with `npm test` (unit) or `npm run test:integration` (database)
 
 ## Future Enhancements
 

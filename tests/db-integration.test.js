@@ -2,7 +2,7 @@
  * Integration tests for database operations
  *
  * Prerequisites:
- *   1. Run sql/test-schema.sql in Supabase to create test schema
+ *   1. Run sql/setup-test-schema.sql then sql/schema.sql in Supabase (see docs/supabase-setup.md)
  *   2. Set environment variables:
  *      - SUPABASE_URL
  *      - SUPABASE_SERVICE_ROLE_KEY
