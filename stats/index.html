@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calibrate — Stats</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/main.css">
+  <style>
+    /* Stats page layout */
+    .stats-page-header h1 {
+      font-size: clamp(1.6rem, 3vw, 2.4rem);
+      margin-bottom: 8px;
+    }
+
+    .stats-page-header .subtitle {
+      margin-bottom: 0;
+    }
+
+    /* Summary tiles row */
+    .summary-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+      animation: fadeUp 0.5s var(--ease) 0.1s both;
+    }
+
+    .stat-tile {
+      text-align: center;
+      padding: 24px 16px;
+    }
+
+    .stat-tile .tile-value {
+      font-family: var(--font-mono);
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+      letter-spacing: -0.03em;
+      margin-bottom: 6px;
+    }
+
+    .stat-tile .tile-label {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+    }
+
+    /* Chart card */
+    .chart-card {
+      animation: fadeUp 0.5s var(--ease) 0.2s both;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .chart-title {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 400;
+      color: var(--text-primary);
+    }
+
+    .range-buttons {
+      display: flex;
+      gap: 4px;
+    }
+
+    .range-btn {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      transition: all 0.2s var(--ease);
+    }
+
+    .range-btn:hover {
+      border-color: var(--border-strong);
+      color: var(--text-secondary);
+    }
+
+    .range-btn.active {
+      background: var(--accent-dim);
+      border-color: rgba(226, 168, 75, 0.3);
+      color: var(--accent);
+    }
+
+    .stats-chart-wrap {
+      position: relative;
+      height: 280px;
+    }
+
+    /* Loading state for tiles */
+    .tile-value.loading {
+      color: var(--text-tertiary);
+    }
+
+    @media (max-width: 640px) {
+      .summary-row {
+        grid-template-columns: 1fr;
+      }
+
+      .chart-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .stat-tile .tile-value {
+        font-size: 1.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Grain texture overlay -->
+  <div class="grain"></div>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="stats-page-header">
+      <div class="header-badge">Stats</div>
+      <h1>Question <em>Metrics</em></h1>
+      <p class="subtitle">Database question generation over time</p>
+    </header>
+
+    <!-- Summary tiles -->
+    <div class="summary-row">
+      <div class="card stat-tile">
+        <div class="tile-value loading" id="tile-total">&mdash;</div>
+        <div class="tile-label">Total Questions</div>
+      </div>
+      <div class="card stat-tile">
+        <div class="tile-value loading" id="tile-active">&mdash;</div>
+        <div class="tile-label">Active Questions</div>
+      </div>
+      <div class="card stat-tile">
+        <div class="tile-value loading" id="tile-avg-responses">&mdash;</div>
+        <div class="tile-label">Avg Responses</div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="card chart-card">
+      <div class="chart-header">
+        <span class="chart-title">Questions Generated</span>
+        <div class="range-buttons">
+          <button class="range-btn" data-days="7">7d</button>
+          <button class="range-btn active" data-days="30">30d</button>
+          <button class="range-btn" data-days="90">90d</button>
+          <button class="range-btn" data-days="0">All</button>
+        </div>
+      </div>
+      <div class="stats-chart-wrap">
+        <canvas id="stats-chart-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Version footer -->
+  <footer class="site-footer">
+    <span id="version-info">v0.2.2</span>
+  </footer>
+
+  <!-- Load Chart.js library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Stats page logic -->
+  <script src="/js/stats.js"></script>
+</body>
+</html>
