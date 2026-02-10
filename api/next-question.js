@@ -21,7 +21,6 @@ function getConfig() {
 const sources = {
   json: () => require('./questions/json-source'),
   gemini: () => require('./questions/gemini-source'),
-  kimi: () => require('./questions/kimi-source'),
   db: () => require('./questions/db-source')
 };
 
