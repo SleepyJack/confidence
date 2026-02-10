@@ -5,6 +5,8 @@
 
 const { getClient } = require('../lib/supabase');
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Map a DB row (snake_case) to the API response shape (camelCase)
  */
@@ -61,7 +63,7 @@ async function fetchRandom(supabase, excludeIds) {
  */
 async function getNextQuestion(seenIds) {
   const supabase = getClient();
-  const seenArray = Array.from(seenIds);
+  const seenArray = Array.from(seenIds).filter(id => UUID_RE.test(id));
 
   // Try unseen questions first
   if (seenArray.length > 0) {
