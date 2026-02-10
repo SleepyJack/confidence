@@ -1,6 +1,6 @@
 {
-  "version": "0.2.2",
-  "questionSources": ["gemini", "db"],
+  "version": "0.2.3",
+  "questionSources": ["db"],
   "persistQuestions": true,
   "gemini": {
     "model": "gemini-2.5-flash"
