@@ -45,10 +45,9 @@ The game tracks your performance across all questions and calculates:
 ## Getting Started
 
 1. Clone the repo and run `npm install`
-2. Set up a Supabase project — see [docs/supabase-setup.md](docs/supabase-setup.md)
-3. Set environment variables (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`)
-4. Run locally with `vercel dev`
-5. Run tests with `npm test` (unit) or `npm run test:integration` (database)
+2. Set up [Supabase](docs/supabase-setup.md) (database) and [Vercel](docs/vercel-setup.md) (hosting)
+3. Run locally with `vercel dev`
+4. Run tests with `npm test` (unit) or `npm run test:integration` (database)
 
 ## Future Enhancements
 
