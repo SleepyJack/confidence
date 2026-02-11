@@ -293,6 +293,18 @@ async function getNextQuestion(seenIds) {
       // Phase 2: Generate the full question
       const question = await attemptGeneration(model, modelName, summary);
 
+      // Post-Phase-2 duplicate check: the final summary may differ from Phase 1's
+      if (shouldPersist && question.summary && question.summary !== summary) {
+        const { duplicate, match } = await checkDuplicate(question.summary);
+        if (duplicate) {
+          console.warn(
+            `Duplicate detected post-generation (attempt ${attempt}/${MAX_RETRIES}): "${question.summary}" ` +
+            `≈ "${match.summary}" (similarity: ${match.sim.toFixed(2)})`
+          );
+          throw new Error(`Duplicate topic: "${question.summary}"`);
+        }
+      }
+
       // Persist to DB
       if (shouldPersist) {
         try {

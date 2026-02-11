@@ -36,16 +36,27 @@ CREATE INDEX IF NOT EXISTS idx_questions_summary_trgm
   ON questions USING gin (summary gin_trgm_ops);
 
 -- RPC function: find questions with similar summaries
+-- Uses GREATEST of similarity + word_similarity (both directions) to catch
+-- substring-style duplicates like "X speed" vs "X speed around the Sun"
 CREATE OR REPLACE FUNCTION check_duplicate_summary(
   candidate TEXT,
   threshold FLOAT DEFAULT 0.4
 )
 RETURNS TABLE(id UUID, summary TEXT, sim FLOAT) AS $$
-  SELECT q.id, q.summary, similarity(q.summary, candidate)::FLOAT AS sim
+  SELECT q.id, q.summary,
+         GREATEST(
+           similarity(q.summary, candidate),
+           word_similarity(candidate, q.summary),
+           word_similarity(q.summary, candidate)
+         )::FLOAT AS sim
   FROM questions q
   WHERE q.summary IS NOT NULL
     AND q.status = 'active'
-    AND similarity(q.summary, candidate) > threshold
+    AND GREATEST(
+          similarity(q.summary, candidate),
+          word_similarity(candidate, q.summary),
+          word_similarity(q.summary, candidate)
+        ) > threshold
   ORDER BY sim DESC
   LIMIT 1;
 $$ LANGUAGE sql STABLE;

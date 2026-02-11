@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "jest --testPathIgnorePatterns=integration",
-    "test:integration": "SUPABASE_SCHEMA=test jest --testPathPattern=integration",
+    "test:integration": "SUPABASE_SCHEMA=test jest --testPathPattern=integration --runInBand",
     "test:all": "npm test && npm run test:integration"
   }
 }

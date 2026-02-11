@@ -114,6 +114,37 @@ describeIf('db-integration', () => {
     expect(data[0].sim).toBeGreaterThan(0.3);
   });
 
+  test('check_duplicate_summary catches substring-style duplicates', async () => {
+    // Insert a question with a short summary
+    const shortQ = {
+      id: crypto.randomUUID(),
+      question: 'What is the orbital speed of Earth in km/s?',
+      answer: 29.78,
+      unit: 'km/s',
+      category: 'astronomy',
+      summary: "Earth's average orbital speed",
+      source_name: 'NASA',
+      source_url: 'https://example.com',
+      creator: 'test-runner',
+      status: 'active'
+    };
+    await supabase.from('questions').insert(shortQ);
+
+    // A longer candidate that contains the short summary should be detected
+    const { data, error } = await supabase.rpc('check_duplicate_summary', {
+      candidate: "Earth's average orbital speed around the Sun",
+      threshold: 0.4
+    });
+
+    expect(error).toBeNull();
+    expect(data.length).toBe(1);
+    expect(data[0].id).toBe(shortQ.id);
+    expect(data[0].sim).toBeGreaterThan(0.4);
+
+    // Clean up
+    await supabase.from('questions').delete().eq('id', shortQ.id);
+  });
+
   test('check_duplicate_summary returns empty for unrelated summaries', async () => {
     const { data, error } = await supabase.rpc('check_duplicate_summary', {
       candidate: 'completely unrelated topic about zebras',
