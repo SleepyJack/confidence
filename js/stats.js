@@ -130,6 +130,15 @@
     });
   });
 
+  // Load version from config.json (same pattern as main.js)
+  fetch('/config.json')
+    .then(function (r) { return r.json(); })
+    .then(function (cfg) {
+      var el = document.getElementById('version-info');
+      if (el && cfg.version) el.textContent = 'v' + cfg.version;
+    })
+    .catch(function () {});
+
   // Initial load with 30-day default
   load(30);
 })();
