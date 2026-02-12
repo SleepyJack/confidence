@@ -145,7 +145,7 @@ async function checkDuplicate(summary) {
 
 /**
  * Parse rate limit info from Gemini error
- * Returns wait time in ms, or null if not a rate limit error
+ * Returns: { wait: ms, isDaily: boolean } or null if not a rate limit error
  */
 function parseRateLimitWait(error) {
   const msg = error.message || '';
@@ -155,19 +155,24 @@ function parseRateLimitWait(error) {
     return null;
   }
 
-  // Try to extract wait time from message (e.g., "retry after 37s")
+  // Try to extract wait time from message (e.g., "retry after 37s", "wait 2 minutes")
   const match = msg.match(/(\d+)\s*(s|sec|second|m|min|minute)/i);
   if (match) {
     const value = parseInt(match[1], 10);
     const unit = match[2].toLowerCase();
-    if (unit.startsWith('m')) {
-      return value * 60 * 1000;
-    }
-    return value * 1000;
+    const waitMs = unit.startsWith('m') ? value * 60 * 1000 : value * 1000;
+    // Per-minute limits typically ask for <5 min wait
+    return { wait: waitMs, isDaily: waitMs > 5 * 60 * 1000 };
   }
 
-  // Default: assume daily limit hit, wait 1 hour
-  return 60 * 60 * 1000;
+  // Check for daily/quota keywords
+  const isDaily = /daily|quota|24.?h/i.test(msg);
+
+  // Default: if looks like daily limit, return long wait; otherwise short wait
+  return {
+    wait: isDaily ? 60 * 60 * 1000 : 60 * 1000,  // 1 hour vs 1 minute
+    isDaily
+  };
 }
 
 /**
@@ -267,7 +272,8 @@ async function persistQuestion(question) {
 
 /**
  * Attempt to generate and persist one question
- * Returns: { success: true, question } or { success: false, error, rateLimitWait? }
+ * Returns: { success: true, question } or { success: false, error, rateLimit? }
+ * where rateLimit = { wait: ms, isDaily: boolean }
  */
 async function generateOneQuestion(model, modelName) {
   try {
@@ -286,9 +292,9 @@ async function generateOneQuestion(model, modelName) {
       }
     } catch (phase1Error) {
       // Check if rate limited
-      const wait = parseRateLimitWait(phase1Error);
-      if (wait) {
-        return { success: false, error: phase1Error.message, rateLimitWait: wait };
+      const rateLimit = parseRateLimitWait(phase1Error);
+      if (rateLimit) {
+        return { success: false, error: phase1Error.message, rateLimit };
       }
       // Otherwise continue without summary
       console.warn('Phase 1 failed, continuing:', phase1Error.message);
@@ -314,11 +320,11 @@ async function generateOneQuestion(model, modelName) {
     return { success: true, question };
 
   } catch (error) {
-    const wait = parseRateLimitWait(error);
+    const rateLimit = parseRateLimitWait(error);
     return {
       success: false,
       error: error.message,
-      rateLimitWait: wait || undefined
+      rateLimit: rateLimit || undefined
     };
   }
 }
@@ -348,9 +354,14 @@ module.exports = async function handler(req, res) {
     generated: 0,
     duplicates: 0,
     errors: [],
-    rateLimited: false,
-    rateLimitWait: null
+    rateLimitWaits: [],
+    dailyLimitHit: false
   };
+
+  // Vercel functions have a 60s timeout (hobby) or 300s (pro)
+  // Leave buffer for response handling
+  const maxRuntime = 55 * 1000;
+  const startTime = Date.now();
 
   try {
     // Check current count
@@ -371,22 +382,43 @@ module.exports = async function handler(req, res) {
       tools: [{ googleSearch: {} }]
     });
 
-    // Generate questions until target reached or rate limited
+    // Generate questions until target reached, daily limit hit, or timeout
     const needed = target - results.initialCount;
-    const maxAttempts = Math.min(needed * 2, 10); // Cap attempts per run
 
-    for (let i = 0; i < maxAttempts && results.generated < needed; i++) {
+    while (results.generated < needed) {
+      // Check if we're running out of time
+      if (Date.now() - startTime > maxRuntime) {
+        console.log('Approaching timeout, stopping');
+        break;
+      }
+
       const result = await generateOneQuestion(model, modelName);
 
       if (result.success) {
         results.generated++;
         console.log(`Generated: ${result.question.summary}`);
-      } else if (result.rateLimitWait) {
-        results.rateLimited = true;
-        results.rateLimitWait = result.rateLimitWait;
-        results.errors.push(result.error);
-        console.log(`Rate limited, wait ${result.rateLimitWait}ms`);
-        break;
+      } else if (result.rateLimit) {
+        const { wait, isDaily } = result.rateLimit;
+
+        if (isDaily) {
+          // Daily limit - stop entirely
+          results.dailyLimitHit = true;
+          results.errors.push(`Daily limit: ${result.error}`);
+          console.log('Daily rate limit hit, stopping');
+          break;
+        } else {
+          // Per-minute limit - wait and continue if we have time
+          results.rateLimitWaits.push(wait);
+          console.log(`Per-minute limit, waiting ${wait}ms`);
+
+          if (Date.now() - startTime + wait > maxRuntime) {
+            console.log('Not enough time to wait, stopping');
+            break;
+          }
+
+          await new Promise(r => setTimeout(r, wait));
+          // Don't count this as an error, just continue
+        }
       } else if (result.error.includes('Duplicate')) {
         results.duplicates++;
         console.log(result.error);
@@ -395,18 +427,16 @@ module.exports = async function handler(req, res) {
         console.error(`Error: ${result.error}`);
       }
 
-      // Brief pause between generations to avoid rapid-fire requests
-      if (i < maxAttempts - 1) {
-        await new Promise(r => setTimeout(r, 1000));
-      }
+      // Brief pause between generations
+      await new Promise(r => setTimeout(r, 1000));
     }
 
     results.finalCount = await getActiveQuestionCount();
 
     return res.status(200).json({
       ...results,
-      message: results.rateLimited
-        ? `Rate limited after generating ${results.generated} questions`
+      message: results.dailyLimitHit
+        ? `Daily limit hit after generating ${results.generated} questions`
         : `Generated ${results.generated} questions (${results.finalCount}/${target})`
     });
 
