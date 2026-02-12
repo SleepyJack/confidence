@@ -21,6 +21,12 @@ function getConfig() {
   return config;
 }
 
+// Load prompt from shared file
+const QUESTION_PROMPT = fs.readFileSync(
+  path.join(process.cwd(), 'prompts', 'question.txt'),
+  'utf8'
+);
+
 // Initialize client (API key from environment)
 let genAI = null;
 function getClient() {
@@ -33,35 +39,6 @@ function getClient() {
   }
   return genAI;
 }
-
-/**
- * System prompt for question generation
- */
-const SYSTEM_PROMPT = `You are a trivia question generator for a calibration game. Generate a single trivia question that has a NUMERICAL answer.
-
-Requirements:
-1. The question must have a specific, factual numerical answer
-2. The question text MUST specify the unit of measurement (e.g., "in kilometers", "in millions of people", "in degrees Celsius")
-3. Use web search to find accurate, current data
-4. Provide both a source name and source URL for the data
-5. Choose interesting topics: science, geography, history, economics, sports statistics, demographics, engineering, nature, etc.
-6. Avoid questions that are too easy (like "how many days in a week") or too obscure
-
-Respond with ONLY valid JSON in this exact format (no markdown, no code blocks):
-{
-  "question": "What is the average distance from Earth to the Moon in kilometers?",
-  "answer": 384400,
-  "unit": "km",
-  "category": "astronomy",
-  "sourceName": "NASA",
-  "sourceUrl": "https://example.com/source-url"
-}
-
-The "question" MUST include the unit (e.g., "in kilometers", "in years", "in USD").
-The "unit" should be a short label matching the unit in the question: km, m, years, people, kg, celsius, USD, etc.
-The "category" should be one of: astronomy, geography, biology, physics, history, chemistry, economics, sports, demographics, engineering, nature, technology
-The "sourceName" should be a short name for the source (e.g., "NASA", "Wikipedia", "WHO")
-The "sourceUrl" MUST be a valid URL where this data can be verified.`;
 
 /**
  * Validate that a source URL is reachable (returns 2xx or 3xx)
@@ -104,7 +81,7 @@ async function attemptGeneration(model, modelName) {
   const result = await model.generateContent({
     contents: [{
       role: 'user',
-      parts: [{ text: SYSTEM_PROMPT }]
+      parts: [{ text: QUESTION_PROMPT }]
     }],
     generationConfig: {
       temperature: 1.0,

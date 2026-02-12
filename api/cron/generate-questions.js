@@ -24,6 +24,16 @@ function getConfig() {
   return config;
 }
 
+// Load prompts from shared files
+const SUMMARY_PROMPT = fs.readFileSync(
+  path.join(process.cwd(), 'prompts', 'summary.txt'),
+  'utf8'
+);
+const QUESTION_PROMPT = fs.readFileSync(
+  path.join(process.cwd(), 'prompts', 'question.txt'),
+  'utf8'
+);
+
 // Initialize Gemini client
 let genAI = null;
 function getGeminiClient() {
@@ -36,44 +46,6 @@ function getGeminiClient() {
   }
   return genAI;
 }
-
-/**
- * Summary-only prompt for Phase 1 (cheap duplicate check)
- */
-const SUMMARY_PROMPT = `Generate a brief summary (max 10 words) of an interesting numerical trivia datum.
-Examples: "depth of the Mariana Trench", "population of Tokyo", "speed of light in km/s"
-Respond with ONLY the summary text, nothing else.`;
-
-/**
- * Full question generation prompt
- */
-const QUESTION_PROMPT = `You are a trivia question generator for a calibration game. Generate a single trivia question that has a NUMERICAL answer.
-
-Requirements:
-1. The question must have a specific, factual numerical answer
-2. The question text MUST specify the unit of measurement (e.g., "in kilometers", "in millions of people", "in degrees Celsius")
-3. Use web search to find accurate, current data
-4. Provide both a source name and source URL for the data
-5. Choose interesting topics: science, geography, history, economics, sports statistics, demographics, engineering, nature, etc.
-6. Avoid questions that are too easy (like "how many days in a week") or too obscure
-
-Respond with ONLY valid JSON in this exact format (no markdown, no code blocks):
-{
-  "question": "What is the average distance from Earth to the Moon in kilometers?",
-  "answer": 384400,
-  "unit": "km",
-  "category": "astronomy",
-  "summary": "average distance from Earth to the Moon",
-  "sourceName": "NASA",
-  "sourceUrl": "https://example.com/source-url"
-}
-
-The "question" MUST include the unit (e.g., "in kilometers", "in years", "in USD").
-The "unit" should be a short label matching the unit in the question: km, m, years, people, kg, celsius, USD, etc.
-The "category" should be one of: astronomy, geography, biology, physics, history, chemistry, economics, sports, demographics, engineering, nature, technology
-The "summary" should be a brief (max 10 words) description of the core datum, e.g. "depth of the Mariana Trench".
-The "sourceName" should be a short name for the source (e.g., "NASA", "Wikipedia", "WHO")
-The "sourceUrl" MUST be a valid URL where this data can be verified.`;
 
 /**
  * Get count of active questions in DB

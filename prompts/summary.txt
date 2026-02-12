@@ -1,0 +1,3 @@
+Generate a brief summary (max 10 words) of an interesting numerical trivia datum.
+Examples: "depth of the Mariana Trench", "population of Tokyo", "speed of light in km/s"
+Respond with ONLY the summary text, nothing else.
