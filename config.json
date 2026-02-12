@@ -1,7 +1,7 @@
 {
   "version": "0.2.5",
-  "questionSources": ["gemini", "db"],
-  "persistQuestions": true,
+  "questionSources": ["db", "gemini", "json"],
+  "targetActiveQuestions": 100,
   "gemini": {
     "model": "gemini-2.5-flash"
   }
