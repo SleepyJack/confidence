@@ -202,41 +202,77 @@ function parseRateLimitWait(error) {
 }
 
 /**
- * Generate a summary (Phase 1)
+ * Validate a summary string
+ * Returns null if invalid, or the cleaned summary if valid
  */
-async function generateSummary(model) {
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts: [{ text: SUMMARY_PROMPT }] }],
-    generationConfig: { temperature: 1.0, maxOutputTokens: 64 }
-  });
+function validateSummary(text) {
+  if (!text) return null;
 
-  const text = result.response.text().trim();
+  // Clean up: remove quotes, trim
+  let cleaned = text.replace(/^["']|["']$/g, '').trim();
 
-  // Validate summary quality
-  if (!text || text.length > 200 || text.startsWith('{')) {
+  // Reject JSON or too long
+  if (cleaned.length > 200 || cleaned.startsWith('{')) {
     return null;
   }
 
   // Reject too short (likely truncated or incomplete)
-  if (text.length < 15) {
-    console.warn(`Summary too short: "${text}"`);
+  if (cleaned.length < 15) {
+    console.warn(`Summary too short: "${cleaned}"`);
     return null;
   }
 
-  // Reject if it looks truncated (ends with quote, ellipsis, or incomplete word)
-  if (/['"]\s*$/.test(text) || text.endsWith('...') || /\s\w{1,2}$/.test(text)) {
-    console.warn(`Summary looks truncated: "${text}"`);
+  // Reject if it looks truncated (ends with quote, ellipsis, possessive, or incomplete word)
+  if (/['"]\s*$/.test(cleaned) || cleaned.endsWith('...') || /'\s*$/.test(cleaned)) {
+    console.warn(`Summary looks truncated: "${cleaned}"`);
+    return null;
+  }
+
+  // Reject fragments that end with articles, prepositions, or possessives
+  if (/\s(the|a|an|of|in|on|at|to|for|with|'s)\s*$/i.test(cleaned)) {
+    console.warn(`Summary ends with incomplete phrase: "${cleaned}"`);
     return null;
   }
 
   // Require at least 3 words
-  const wordCount = text.split(/\s+/).length;
+  const wordCount = cleaned.split(/\s+/).length;
   if (wordCount < 3) {
-    console.warn(`Summary has too few words (${wordCount}): "${text}"`);
+    console.warn(`Summary has too few words (${wordCount}): "${cleaned}"`);
     return null;
   }
 
-  return text;
+  return cleaned;
+}
+
+/**
+ * Generate a summary (Phase 1)
+ * Uses lower temperature and retries for better quality
+ */
+async function generateSummary(model) {
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: SUMMARY_PROMPT }] }],
+      // Lower temperature for more coherent output
+      generationConfig: { temperature: 0.8, maxOutputTokens: 64 }
+    });
+
+    const text = result.response.text().trim();
+    const validated = validateSummary(text);
+
+    if (validated) {
+      return validated;
+    }
+
+    if (attempt < maxAttempts) {
+      console.log(`Summary attempt ${attempt} failed, retrying...`);
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
+
+  console.warn('All summary attempts failed');
+  return null;
 }
 
 /**
@@ -330,15 +366,19 @@ async function persistQuestion(question, embedding) {
  * Attempt to generate and persist one question
  * Returns: { success: true, question } or { success: false, error, rateLimit? }
  * where rateLimit = { wait: ms, isDaily: boolean }
+ *
+ * @param {object} summaryModel - Simple model for summary generation
+ * @param {object} questionModel - Model with Google Search for full questions
+ * @param {string} modelName - Model name for creator field
  */
-async function generateOneQuestion(model, modelName) {
+async function generateOneQuestion(summaryModel, questionModel, modelName) {
   try {
     // Phase 1: Generate summary, get embedding, check for duplicates
     let summary = null;
     let embedding = null;
 
     try {
-      summary = await generateSummary(model);
+      summary = await generateSummary(summaryModel);
       if (summary) {
         // Generate embedding for semantic duplicate check
         embedding = await generateEmbedding(summary);
@@ -361,8 +401,8 @@ async function generateOneQuestion(model, modelName) {
       console.warn('Phase 1 failed, continuing:', phase1Error.message);
     }
 
-    // Phase 2: Generate full question
-    const question = await generateQuestion(model, modelName, summary);
+    // Phase 2: Generate full question (uses model with Google Search)
+    const question = await generateQuestion(questionModel, modelName, summary);
 
     // Post-generation duplicate check if summary changed
     if (question.summary && question.summary !== summary) {
@@ -439,9 +479,14 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Initialize Gemini
+    // Initialize Gemini models
     const client = getGeminiClient();
-    const model = client.getGenerativeModel({
+
+    // Simple model for summary generation (no tools, more focused)
+    const summaryModel = client.getGenerativeModel({ model: modelName });
+
+    // Model with Google Search for full question generation
+    const questionModel = client.getGenerativeModel({
       model: modelName,
       tools: [{ googleSearch: {} }]
     });
@@ -456,7 +501,7 @@ module.exports = async function handler(req, res) {
         break;
       }
 
-      const result = await generateOneQuestion(model, modelName);
+      const result = await generateOneQuestion(summaryModel, questionModel, modelName);
 
       if (result.success) {
         results.generated++;

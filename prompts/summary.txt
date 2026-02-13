@@ -1,3 +1,17 @@
-Generate a brief summary (max 10 words) of an interesting numerical trivia datum.
-Examples: "depth of the Mariana Trench", "population of Tokyo", "speed of light in km/s"
-Respond with ONLY the summary text, nothing else.
+Generate a brief topic (3-8 words) for a numerical trivia question.
+
+The topic should describe something with a specific, verifiable number.
+
+Good examples:
+- depth of the Mariana Trench in meters
+- population of Tokyo
+- number of bones in the human body
+- height of Mount Everest in feet
+- year the Eiffel Tower was built
+
+Bad examples (too vague or incomplete):
+- "Earth's" (incomplete)
+- "the number of" (incomplete)
+- "interesting facts" (no specific topic)
+
+Respond with ONLY the topic text. Do not include quotes, explanations, or preamble.
