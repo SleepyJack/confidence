@@ -161,18 +161,18 @@ function parseRateLimitWait(error) {
   console.log('Rate limit error details:', msg);
 
   // Try to extract wait time from message
-  // Patterns: "retry after 37s", "wait 2 minutes", "try again in 60 seconds"
+  // Patterns: "retry after 37s", "wait 2 minutes", "retry in 30.834s"
   const timePatterns = [
-    /retry\s*(?:after|in)\s*(\d+)\s*(s|sec|second|m|min|minute|h|hour)/i,
-    /wait\s*(\d+)\s*(s|sec|second|m|min|minute|h|hour)/i,
-    /try\s*again\s*in\s*(\d+)\s*(s|sec|second|m|min|minute|h|hour)/i,
-    /(\d+)\s*(s|sec|second|m|min|minute|h|hour)\s*(?:remaining|left|until)/i
+    /retry\s*(?:after|in)\s*([\d.]+)\s*(s|sec|second|m|min|minute|h|hour)/i,
+    /wait\s*([\d.]+)\s*(s|sec|second|m|min|minute|h|hour)/i,
+    /try\s*again\s*in\s*([\d.]+)\s*(s|sec|second|m|min|minute|h|hour)/i,
+    /([\d.]+)\s*(s|sec|second|m|min|minute|h|hour)\s*(?:remaining|left|until)/i
   ];
 
   for (const pattern of timePatterns) {
     const match = msg.match(pattern);
     if (match) {
-      const value = parseInt(match[1], 10);
+      const value = parseFloat(match[1]);
       const unit = match[2].toLowerCase();
       let waitMs;
 
@@ -217,7 +217,8 @@ function validateSummary(text) {
   }
 
   // Reject too short (likely truncated or incomplete)
-  if (cleaned.length < 15) {
+  // "speed of light" = 14 chars, so use 10 as minimum
+  if (cleaned.length < 10) {
     console.warn(`Summary too short: "${cleaned}"`);
     return null;
   }
