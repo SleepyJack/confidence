@@ -96,12 +96,13 @@ async function validateSourceUrl(url) {
 
 /**
  * Check if a summary is a duplicate via Supabase RPC
+ * Uses higher threshold (0.55) to reduce false positives on common phrases
  */
 async function checkDuplicate(summary) {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc('check_duplicate_summary', {
     candidate: summary,
-    threshold: 0.4
+    threshold: 0.55
   });
 
   if (error) {
@@ -157,9 +158,31 @@ async function generateSummary(model) {
   });
 
   const text = result.response.text().trim();
+
+  // Validate summary quality
   if (!text || text.length > 200 || text.startsWith('{')) {
     return null;
   }
+
+  // Reject too short (likely truncated or incomplete)
+  if (text.length < 15) {
+    console.warn(`Summary too short: "${text}"`);
+    return null;
+  }
+
+  // Reject if it looks truncated (ends with quote, ellipsis, or incomplete word)
+  if (/['"]\s*$/.test(text) || text.endsWith('...') || /\s\w{1,2}$/.test(text)) {
+    console.warn(`Summary looks truncated: "${text}"`);
+    return null;
+  }
+
+  // Require at least 3 words
+  const wordCount = text.split(/\s+/).length;
+  if (wordCount < 3) {
+    console.warn(`Summary has too few words (${wordCount}): "${text}"`);
+    return null;
+  }
+
   return text;
 }
 
