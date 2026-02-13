@@ -247,33 +247,23 @@ function validateSummary(text) {
 
 /**
  * Generate a summary (Phase 1)
- * Uses lower temperature and retries for better quality
+ * Single attempt only - retries waste limited API quota
+ * If summary is invalid, phase 2 will generate its own topic
  */
 async function generateSummary(model) {
-  const maxAttempts = 3;
+  const result = await model.generateContent({
+    contents: [{ role: 'user', parts: [{ text: SUMMARY_PROMPT }] }],
+    generationConfig: { temperature: 0.8, maxOutputTokens: 64 }
+  });
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: SUMMARY_PROMPT }] }],
-      // Lower temperature for more coherent output
-      generationConfig: { temperature: 0.8, maxOutputTokens: 64 }
-    });
+  const text = result.response.text().trim();
+  const validated = validateSummary(text);
 
-    const text = result.response.text().trim();
-    const validated = validateSummary(text);
-
-    if (validated) {
-      return validated;
-    }
-
-    if (attempt < maxAttempts) {
-      console.log(`Summary attempt ${attempt} failed, retrying...`);
-      await new Promise(r => setTimeout(r, 500));
-    }
+  if (!validated) {
+    console.warn(`Invalid summary, skipping to phase 2: "${text}"`);
   }
 
-  console.warn('All summary attempts failed');
-  return null;
+  return validated;
 }
 
 /**
