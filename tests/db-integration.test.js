@@ -161,4 +161,96 @@ describeIf('db-integration', () => {
     expect(error).toBeTruthy();
     expect(error.code).toBe('23505'); // Postgres unique violation
   });
+
+  // Embedding-based duplicate detection tests
+  describe('check_duplicate_embedding', () => {
+    // Create a simple mock embedding (768 dims, mostly zeros with a few values)
+    const createMockEmbedding = (seed) => {
+      const embedding = new Array(768).fill(0);
+      // Set a few values based on seed to create distinct vectors
+      for (let i = 0; i < 10; i++) {
+        embedding[(seed * 7 + i * 13) % 768] = Math.sin(seed + i) * 0.5;
+      }
+      // Normalize (roughly)
+      const norm = Math.sqrt(embedding.reduce((sum, v) => sum + v * v, 0)) || 1;
+      return embedding.map(v => v / norm);
+    };
+
+    const embeddingQuestion = {
+      id: crypto.randomUUID(),
+      question: 'What is the height of Mount Everest in meters?',
+      answer: 8849,
+      unit: 'm',
+      category: 'geography',
+      summary: 'height of Mount Everest',
+      source_name: 'National Geographic',
+      source_url: 'https://example.com/everest',
+      creator: 'test-runner',
+      status: 'active'
+    };
+
+    const mockEmbedding = createMockEmbedding(42);
+
+    beforeAll(async () => {
+      // Insert question with embedding
+      const { error } = await supabase.from('questions').insert({
+        ...embeddingQuestion,
+        embedding: `[${mockEmbedding.join(',')}]`
+      });
+      if (error) console.error('Failed to insert embedding question:', error);
+    });
+
+    afterAll(async () => {
+      await supabase.from('questions').delete().eq('id', embeddingQuestion.id);
+    });
+
+    test('detects similar embeddings', async () => {
+      // Query with the same embedding - should match
+      const { data, error } = await supabase.rpc('check_duplicate_embedding', {
+        query_embedding: `[${mockEmbedding.join(',')}]`,
+        threshold: 0.85
+      });
+
+      expect(error).toBeNull();
+      expect(data).toBeTruthy();
+      expect(data.length).toBeGreaterThan(0);
+      expect(data[0].id).toBe(embeddingQuestion.id);
+      expect(data[0].similarity).toBeGreaterThan(0.99); // Same vector = ~1.0 similarity
+    });
+
+    test('rejects dissimilar embeddings', async () => {
+      // Query with a completely different embedding
+      const differentEmbedding = createMockEmbedding(999);
+
+      const { data, error } = await supabase.rpc('check_duplicate_embedding', {
+        query_embedding: `[${differentEmbedding.join(',')}]`,
+        threshold: 0.85
+      });
+
+      expect(error).toBeNull();
+      expect(data).toEqual([]); // No match - vectors are dissimilar
+    });
+
+    test('respects threshold parameter', async () => {
+      // Create a slightly different embedding (should have moderate similarity)
+      const slightlyDifferent = mockEmbedding.map((v, i) =>
+        i < 100 ? v * 0.9 + 0.1 * Math.random() : v
+      );
+
+      // With low threshold, might match
+      const { data: lowThreshold } = await supabase.rpc('check_duplicate_embedding', {
+        query_embedding: `[${slightlyDifferent.join(',')}]`,
+        threshold: 0.5
+      });
+
+      // With high threshold, shouldn't match
+      const { data: highThreshold } = await supabase.rpc('check_duplicate_embedding', {
+        query_embedding: `[${slightlyDifferent.join(',')}]`,
+        threshold: 0.99
+      });
+
+      // High threshold should be more restrictive
+      expect(highThreshold.length).toBeLessThanOrEqual(lowThreshold.length);
+    });
+  });
 });
