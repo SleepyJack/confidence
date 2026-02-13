@@ -95,14 +95,30 @@ async function validateSourceUrl(url) {
 }
 
 /**
- * Check if a summary is a duplicate via Supabase RPC
- * Uses higher threshold (0.55) to reduce false positives on common phrases
+ * Generate embedding for text using Gemini's embedding model
+ * Returns 768-dimensional vector
  */
-async function checkDuplicate(summary) {
+async function generateEmbedding(text) {
+  const client = getGeminiClient();
+  const model = client.getGenerativeModel({ model: 'text-embedding-004' });
+
+  const result = await model.embedContent(text);
+  return result.embedding.values;
+}
+
+/**
+ * Check if a summary is a duplicate via embedding similarity
+ * Uses cosine similarity (0.85+ = semantic duplicate)
+ */
+async function checkDuplicate(summary, embedding) {
   const supabase = getSupabase();
-  const { data, error } = await supabase.rpc('check_duplicate_summary', {
-    candidate: summary,
-    threshold: 0.55
+
+  // Format embedding as PostgreSQL vector literal
+  const vectorStr = `[${embedding.join(',')}]`;
+
+  const { data, error } = await supabase.rpc('check_duplicate_embedding', {
+    query_embedding: vectorStr,
+    threshold: 0.85
   });
 
   if (error) {
@@ -243,11 +259,12 @@ async function generateQuestion(model, modelName, summary) {
 }
 
 /**
- * Persist question to DB
+ * Persist question to DB with embedding
  */
-async function persistQuestion(question) {
+async function persistQuestion(question, embedding) {
   const supabase = getSupabase();
-  const { error } = await supabase.from('questions').insert({
+
+  const row = {
     id: question.id,
     question: question.question,
     answer: question.answer,
@@ -258,7 +275,14 @@ async function persistQuestion(question) {
     source_url: question.sourceUrl,
     creator: question.creator,
     status: 'active'
-  });
+  };
+
+  // Add embedding if provided (as PostgreSQL vector literal)
+  if (embedding) {
+    row.embedding = `[${embedding.join(',')}]`;
+  }
+
+  const { error } = await supabase.from('questions').insert(row);
 
   if (error) {
     throw new Error(`DB insert failed: ${error.message}`);
@@ -272,16 +296,21 @@ async function persistQuestion(question) {
  */
 async function generateOneQuestion(model, modelName) {
   try {
-    // Phase 1: Generate summary and check for duplicates
+    // Phase 1: Generate summary, get embedding, check for duplicates
     let summary = null;
+    let embedding = null;
+
     try {
       summary = await generateSummary(model);
       if (summary) {
-        const { duplicate, match } = await checkDuplicate(summary);
+        // Generate embedding for semantic duplicate check
+        embedding = await generateEmbedding(summary);
+
+        const { duplicate, match } = await checkDuplicate(summary, embedding);
         if (duplicate) {
           return {
             success: false,
-            error: `Duplicate: "${summary}" ≈ "${match.summary}" (${match.sim.toFixed(2)})`
+            error: `Duplicate: "${summary}" ≈ "${match.summary}" (${(match.similarity * 100).toFixed(0)}%)`
           };
         }
       }
@@ -291,26 +320,29 @@ async function generateOneQuestion(model, modelName) {
       if (rateLimit) {
         return { success: false, error: phase1Error.message, rateLimit };
       }
-      // Otherwise continue without summary
+      // Otherwise continue without summary/embedding
       console.warn('Phase 1 failed, continuing:', phase1Error.message);
     }
 
     // Phase 2: Generate full question
     const question = await generateQuestion(model, modelName, summary);
 
-    // Post-generation duplicate check
+    // Post-generation duplicate check if summary changed
     if (question.summary && question.summary !== summary) {
-      const { duplicate, match } = await checkDuplicate(question.summary);
+      const newEmbedding = await generateEmbedding(question.summary);
+      const { duplicate, match } = await checkDuplicate(question.summary, newEmbedding);
       if (duplicate) {
         return {
           success: false,
           error: `Duplicate post-gen: "${question.summary}" ≈ "${match.summary}"`
         };
       }
+      // Use the new embedding for storage
+      embedding = newEmbedding;
     }
 
-    // Persist to DB
-    await persistQuestion(question);
+    // Persist to DB with embedding
+    await persistQuestion(question, embedding);
 
     return { success: true, question };
 
