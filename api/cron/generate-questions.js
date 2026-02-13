@@ -100,9 +100,16 @@ async function validateSourceUrl(url) {
  */
 async function generateEmbedding(text) {
   const client = getGeminiClient();
-  const model = client.getGenerativeModel({ model: 'text-embedding-004' });
 
-  const result = await model.embedContent(text);
+  // Use gemini-embedding-001 (newer model, more reliable)
+  // Request 768 dimensions to match our DB schema
+  const model = client.getGenerativeModel({ model: 'gemini-embedding-001' });
+
+  const result = await model.embedContent({
+    content: { parts: [{ text }] },
+    outputDimensionality: 768
+  });
+
   return result.embedding.values;
 }
 
@@ -140,28 +147,58 @@ function parseRateLimitWait(error) {
   const msg = error.message || '';
 
   // Check for rate limit indicators
-  if (!msg.includes('429') && !msg.includes('RESOURCE_EXHAUSTED') && !msg.includes('quota')) {
+  const isRateLimit = msg.includes('429') ||
+    msg.includes('RESOURCE_EXHAUSTED') ||
+    msg.includes('quota') ||
+    msg.includes('rate') ||
+    msg.includes('Too Many Requests');
+
+  if (!isRateLimit) {
     return null;
   }
 
-  // Try to extract wait time from message (e.g., "retry after 37s", "wait 2 minutes")
-  const match = msg.match(/(\d+)\s*(s|sec|second|m|min|minute)/i);
-  if (match) {
-    const value = parseInt(match[1], 10);
-    const unit = match[2].toLowerCase();
-    const waitMs = unit.startsWith('m') ? value * 60 * 1000 : value * 1000;
-    // Per-minute limits typically ask for <5 min wait
-    return { wait: waitMs, isDaily: waitMs > 5 * 60 * 1000 };
+  // Log full error for debugging
+  console.log('Rate limit error details:', msg);
+
+  // Try to extract wait time from message
+  // Patterns: "retry after 37s", "wait 2 minutes", "try again in 60 seconds"
+  const timePatterns = [
+    /retry\s*(?:after|in)\s*(\d+)\s*(s|sec|second|m|min|minute|h|hour)/i,
+    /wait\s*(\d+)\s*(s|sec|second|m|min|minute|h|hour)/i,
+    /try\s*again\s*in\s*(\d+)\s*(s|sec|second|m|min|minute|h|hour)/i,
+    /(\d+)\s*(s|sec|second|m|min|minute|h|hour)\s*(?:remaining|left|until)/i
+  ];
+
+  for (const pattern of timePatterns) {
+    const match = msg.match(pattern);
+    if (match) {
+      const value = parseInt(match[1], 10);
+      const unit = match[2].toLowerCase();
+      let waitMs;
+
+      if (unit.startsWith('h')) {
+        waitMs = value * 60 * 60 * 1000;
+      } else if (unit.startsWith('m')) {
+        waitMs = value * 60 * 1000;
+      } else {
+        waitMs = value * 1000;
+      }
+
+      // Per-minute limits typically ask for <5 min wait
+      const isDaily = waitMs > 5 * 60 * 1000;
+      console.log(`Parsed rate limit: wait ${waitMs}ms, isDaily=${isDaily}`);
+      return { wait: waitMs, isDaily };
+    }
   }
 
-  // Check for daily/quota keywords
-  const isDaily = /daily|quota|24.?h/i.test(msg);
+  // Check for daily/quota keywords (per-day, daily, 24h, RPD)
+  const isDaily = /daily|per.?day|24.?h|RPD|requests?.?per.?day/i.test(msg);
 
-  // Default: if looks like daily limit, return long wait; otherwise short wait
-  return {
-    wait: isDaily ? 60 * 60 * 1000 : 60 * 1000,  // 1 hour vs 1 minute
-    isDaily
-  };
+  // Default: if looks like daily limit, return long wait; otherwise 1 minute
+  const wait = isDaily ? 60 * 60 * 1000 : 60 * 1000;
+  console.log(`Default rate limit: wait ${wait}ms, isDaily=${isDaily}`);
+
+  return { wait, isDaily };
 }
 
 /**
