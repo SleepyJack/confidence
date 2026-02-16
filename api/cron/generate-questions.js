@@ -180,6 +180,24 @@ function parseRateLimitWait(error) {
 }
 
 /**
+ * Get all active summaries from DB (for duplicate avoidance in prompt)
+ */
+async function getExistingSummaries() {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from('questions')
+    .select('summary')
+    .eq('status', 'active');
+
+  if (error) {
+    console.warn('Failed to fetch summaries:', error.message);
+    return [];
+  }
+
+  return data.map(q => q.summary).filter(Boolean);
+}
+
+/**
  * Validate summary from generated question
  */
 function validateSummary(text) {
@@ -198,10 +216,21 @@ function validateSummary(text) {
 
 /**
  * Generate a full question with Google Search
+ * @param {object} model - Gemini model
+ * @param {string} modelName - Model name for creator field
+ * @param {string[]} existingSummaries - List of summaries to avoid
  */
-async function generateQuestion(model, modelName) {
+async function generateQuestion(model, modelName, existingSummaries = []) {
+  let prompt = QUESTION_PROMPT;
+
+  // Add existing summaries to help avoid duplicates
+  if (existingSummaries.length > 0) {
+    const summaryList = existingSummaries.map(s => `- ${s}`).join('\n');
+    prompt += `\n\nIMPORTANT: Avoid these topics that already exist in our database:\n${summaryList}\n\nGenerate a question about a DIFFERENT topic.`;
+  }
+
   const result = await model.generateContent({
-    contents: [{ role: 'user', parts: [{ text: QUESTION_PROMPT }] }],
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: { temperature: 1.0, maxOutputTokens: 2048 }
   });
 
@@ -282,12 +311,15 @@ async function persistQuestion(question, embedding) {
 /**
  * Attempt to generate and persist one question
  * Single-phase: generate question -> validate URL -> check duplicate -> persist
+ * @param {object} model - Gemini model
+ * @param {string} modelName - Model name for creator field
+ * @param {string[]} existingSummaries - Summaries to avoid (passed to prompt)
  */
-async function generateOneQuestion(model, modelName) {
+async function generateOneQuestion(model, modelName, existingSummaries) {
   try {
     // Step 1: Generate full question (1 API call)
     console.log('Generating question...');
-    const question = await generateQuestion(model, modelName);
+    const question = await generateQuestion(model, modelName, existingSummaries);
     console.log(`Got question: "${question.summary}"`);
 
     // Step 2: Validate URL (no API call)
@@ -374,6 +406,10 @@ module.exports = async function handler(req, res) {
       tools: [{ googleSearch: {} }]
     });
 
+    // Fetch existing summaries to help avoid duplicates
+    const existingSummaries = await getExistingSummaries();
+    console.log(`Loaded ${existingSummaries.length} existing summaries`);
+
     const needed = target - results.initialCount;
 
     while (results.generated < needed) {
@@ -382,10 +418,12 @@ module.exports = async function handler(req, res) {
         break;
       }
 
-      const result = await generateOneQuestion(model, modelName);
+      const result = await generateOneQuestion(model, modelName, existingSummaries);
 
       if (result.success) {
         results.generated++;
+        // Add to list so next generation knows to avoid it
+        existingSummaries.push(result.question.summary);
         console.log(`✓ Generated: ${result.question.summary}`);
       } else if (result.rateLimit) {
         const { wait, isDaily } = result.rateLimit;
