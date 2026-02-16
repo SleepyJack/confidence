@@ -86,8 +86,7 @@ async function validateSourceUrl(url) {
           'Accept': 'text/html,*/*'
         }
       });
-      // Accept anything that isn't a definitive "not found"
-      return response.status !== 404 && response.status !== 410;
+      return response.status >= 200 && response.status < 400;
     } finally {
       clearTimeout(timer);
     }
