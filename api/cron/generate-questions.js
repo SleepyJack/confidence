@@ -1,8 +1,8 @@
 /**
  * Background question generation cron job
  *
- * Generates questions via Gemini and persists to DB.
- * Handles rate limiting with exponential backoff.
+ * Single-phase approach: generate full question, then check for duplicates.
+ * Optimized for request rate limits (not token limits).
  *
  * Vercel cron: configure in vercel.json
  * Manual trigger: GET /api/cron/generate-questions
@@ -24,11 +24,7 @@ function getConfig() {
   return config;
 }
 
-// Load prompts from shared files
-const SUMMARY_PROMPT = fs.readFileSync(
-  path.join(process.cwd(), 'prompts', 'summary.txt'),
-  'utf8'
-);
+// Load question prompt
 const QUESTION_PROMPT = fs.readFileSync(
   path.join(process.cwd(), 'prompts', 'question.txt'),
   'utf8'
@@ -78,13 +74,12 @@ async function validateSourceUrl(url) {
 
     try {
       const response = await fetch(url, {
-        method: 'GET',
+        method: 'HEAD',
         signal: controller.signal,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; Calibrate-Bot/1.0)'
+          'User-Agent': 'Mozilla/5.0 (compatible; ConfidenceBot/1.0)'
         }
       });
-      controller.abort();
       return response.status >= 200 && response.status < 400;
     } finally {
       clearTimeout(timer);
@@ -96,13 +91,9 @@ async function validateSourceUrl(url) {
 
 /**
  * Generate embedding for text using Gemini's embedding model
- * Returns 768-dimensional vector
  */
 async function generateEmbedding(text) {
   const client = getGeminiClient();
-
-  // Use gemini-embedding-001 (newer model, more reliable)
-  // Request 768 dimensions to match our DB schema
   const model = client.getGenerativeModel({ model: 'gemini-embedding-001' });
 
   const result = await model.embedContent({
@@ -115,12 +106,9 @@ async function generateEmbedding(text) {
 
 /**
  * Check if a summary is a duplicate via embedding similarity
- * Uses cosine similarity (0.85+ = semantic duplicate)
  */
 async function checkDuplicate(summary, embedding) {
   const supabase = getSupabase();
-
-  // Format embedding as PostgreSQL vector literal
   const vectorStr = `[${embedding.join(',')}]`;
 
   const { data, error } = await supabase.rpc('check_duplicate_embedding', {
@@ -129,7 +117,7 @@ async function checkDuplicate(summary, embedding) {
   });
 
   if (error) {
-    console.warn('Duplicate check RPC failed:', error.message);
+    console.warn('Duplicate check failed:', error.message);
     return { duplicate: false };
   }
 
@@ -141,12 +129,10 @@ async function checkDuplicate(summary, embedding) {
 
 /**
  * Parse rate limit info from Gemini error
- * Returns: { wait: ms, isDaily: boolean } or null if not a rate limit error
  */
 function parseRateLimitWait(error) {
   const msg = error.message || '';
 
-  // Check for rate limit indicators
   const isRateLimit = msg.includes('429') ||
     msg.includes('RESOURCE_EXHAUSTED') ||
     msg.includes('quota') ||
@@ -157,11 +143,9 @@ function parseRateLimitWait(error) {
     return null;
   }
 
-  // Log full error for debugging
-  console.log('Rate limit error details:', msg);
+  console.log('Rate limit error:', msg);
 
-  // Try to extract wait time from message
-  // Patterns: "retry after 37s", "wait 2 minutes", "retry in 30.834s"
+  // Extract wait time (handles decimals like "30.834s")
   const timePatterns = [
     /retry\s*(?:after|in)\s*([\d.]+)\s*(s|sec|second|m|min|minute|h|hour)/i,
     /wait\s*([\d.]+)\s*(s|sec|second|m|min|minute|h|hour)/i,
@@ -184,61 +168,28 @@ function parseRateLimitWait(error) {
         waitMs = value * 1000;
       }
 
-      // Per-minute limits typically ask for <5 min wait
       const isDaily = waitMs > 5 * 60 * 1000;
-      console.log(`Parsed rate limit: wait ${waitMs}ms, isDaily=${isDaily}`);
+      console.log(`Parsed: wait ${Math.round(waitMs / 1000)}s, isDaily=${isDaily}`);
       return { wait: waitMs, isDaily };
     }
   }
 
-  // Check for daily/quota keywords (per-day, daily, 24h, RPD)
-  const isDaily = /daily|per.?day|24.?h|RPD|requests?.?per.?day/i.test(msg);
-
-  // Default: if looks like daily limit, return long wait; otherwise 1 minute
+  const isDaily = /daily|per.?day|24.?h|RPD/i.test(msg);
   const wait = isDaily ? 60 * 60 * 1000 : 60 * 1000;
-  console.log(`Default rate limit: wait ${wait}ms, isDaily=${isDaily}`);
-
   return { wait, isDaily };
 }
 
 /**
- * Validate a summary string
- * Returns null if invalid, or the cleaned summary if valid
+ * Validate summary from generated question
  */
 function validateSummary(text) {
-  if (!text) return null;
+  if (!text || typeof text !== 'string') return null;
 
-  // Clean up: remove quotes, trim
-  let cleaned = text.replace(/^["']|["']$/g, '').trim();
+  const cleaned = text.trim();
+  if (cleaned.length < 10 || cleaned.length > 200) return null;
 
-  // Reject JSON or too long
-  if (cleaned.length > 200 || cleaned.startsWith('{')) {
-    return null;
-  }
-
-  // Reject too short (likely truncated or incomplete)
-  // "speed of light" = 14 chars, so use 10 as minimum
-  if (cleaned.length < 10) {
-    console.warn(`Summary too short: "${cleaned}"`);
-    return null;
-  }
-
-  // Reject if it looks truncated (ends with quote, ellipsis, possessive, or incomplete word)
-  if (/['"]\s*$/.test(cleaned) || cleaned.endsWith('...') || /'\s*$/.test(cleaned)) {
-    console.warn(`Summary looks truncated: "${cleaned}"`);
-    return null;
-  }
-
-  // Reject fragments that end with articles, prepositions, or possessives
+  // Reject incomplete phrases
   if (/\s(the|a|an|of|in|on|at|to|for|with|'s)\s*$/i.test(cleaned)) {
-    console.warn(`Summary ends with incomplete phrase: "${cleaned}"`);
-    return null;
-  }
-
-  // Require at least 3 words
-  const wordCount = cleaned.split(/\s+/).length;
-  if (wordCount < 3) {
-    console.warn(`Summary has too few words (${wordCount}): "${cleaned}"`);
     return null;
   }
 
@@ -246,45 +197,11 @@ function validateSummary(text) {
 }
 
 /**
- * Generate a summary (Phase 1)
- * Retries on invalid summaries - worth it to catch duplicates early
- * and avoid wasting a full question generation call
+ * Generate a full question with Google Search
  */
-async function generateSummary(model) {
-  const maxAttempts = 3;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: SUMMARY_PROMPT }] }],
-      generationConfig: { temperature: 0.8, maxOutputTokens: 64 }
-    });
-
-    const text = result.response.text().trim();
-    const validated = validateSummary(text);
-
-    if (validated) {
-      return validated;
-    }
-
-    if (attempt < maxAttempts) {
-      console.log(`Summary attempt ${attempt} invalid ("${text}"), retrying...`);
-    }
-  }
-
-  console.warn('All summary attempts failed, skipping to phase 2');
-  return null;
-}
-
-/**
- * Generate full question (Phase 2)
- */
-async function generateQuestion(model, modelName, summary) {
-  const prompt = summary
-    ? `${QUESTION_PROMPT}\n\nGenerate a question about: ${summary}`
-    : QUESTION_PROMPT;
-
+async function generateQuestion(model, modelName) {
   const result = await model.generateContent({
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    contents: [{ role: 'user', parts: [{ text: QUESTION_PROMPT }] }],
     generationConfig: { temperature: 1.0, maxOutputTokens: 2048 }
   });
 
@@ -313,9 +230,10 @@ async function generateQuestion(model, modelName, summary) {
     throw new Error('Answer must be a number');
   }
 
-  // Validate URL
-  if (!await validateSourceUrl(data.sourceUrl)) {
-    throw new Error(`Invalid source URL: ${data.sourceUrl}`);
+  // Validate summary
+  const validatedSummary = validateSummary(data.summary);
+  if (!validatedSummary) {
+    throw new Error(`Invalid summary: "${data.summary}"`);
   }
 
   return {
@@ -324,7 +242,7 @@ async function generateQuestion(model, modelName, summary) {
     answer: data.answer,
     unit: data.unit,
     category: data.category,
-    summary: data.summary || summary,
+    summary: validatedSummary,
     sourceName: data.sourceName,
     sourceUrl: data.sourceUrl,
     creator: modelName
@@ -350,7 +268,6 @@ async function persistQuestion(question, embedding) {
     status: 'active'
   };
 
-  // Add embedding if provided (as PostgreSQL vector literal)
   if (embedding) {
     row.embedding = `[${embedding.join(',')}]`;
   }
@@ -364,63 +281,38 @@ async function persistQuestion(question, embedding) {
 
 /**
  * Attempt to generate and persist one question
- * Returns: { success: true, question } or { success: false, error, rateLimit? }
- * where rateLimit = { wait: ms, isDaily: boolean }
- *
- * @param {object} summaryModel - Simple model for summary generation
- * @param {object} questionModel - Model with Google Search for full questions
- * @param {string} modelName - Model name for creator field
+ * Single-phase: generate question -> validate URL -> check duplicate -> persist
  */
-async function generateOneQuestion(summaryModel, questionModel, modelName) {
+async function generateOneQuestion(model, modelName) {
   try {
-    // Phase 1: Generate summary, get embedding, check for duplicates
-    let summary = null;
-    let embedding = null;
+    // Step 1: Generate full question (1 API call)
+    console.log('Generating question...');
+    const question = await generateQuestion(model, modelName);
+    console.log(`Got question: "${question.summary}"`);
 
-    try {
-      summary = await generateSummary(summaryModel);
-      if (summary) {
-        // Generate embedding for semantic duplicate check
-        embedding = await generateEmbedding(summary);
-
-        const { duplicate, match } = await checkDuplicate(summary, embedding);
-        if (duplicate) {
-          return {
-            success: false,
-            error: `Duplicate: "${summary}" ≈ "${match.summary}" (${(match.similarity * 100).toFixed(0)}%)`
-          };
-        }
-      }
-    } catch (phase1Error) {
-      // Check if rate limited
-      const rateLimit = parseRateLimitWait(phase1Error);
-      if (rateLimit) {
-        return { success: false, error: phase1Error.message, rateLimit };
-      }
-      // Otherwise continue without summary/embedding
-      console.warn('Phase 1 failed, continuing:', phase1Error.message);
+    // Step 2: Validate URL (no API call)
+    console.log(`Validating URL: ${question.sourceUrl}`);
+    if (!await validateSourceUrl(question.sourceUrl)) {
+      return {
+        success: false,
+        error: `Invalid source URL: ${question.sourceUrl}`
+      };
     }
 
-    // Phase 2: Generate full question (uses model with Google Search)
-    const question = await generateQuestion(questionModel, modelName, summary);
+    // Step 3: Generate embedding and check for duplicates (1 API call)
+    console.log('Checking for duplicates...');
+    const embedding = await generateEmbedding(question.summary);
+    const { duplicate, match } = await checkDuplicate(question.summary, embedding);
 
-    // Post-generation duplicate check if summary changed
-    if (question.summary && question.summary !== summary) {
-      const newEmbedding = await generateEmbedding(question.summary);
-      const { duplicate, match } = await checkDuplicate(question.summary, newEmbedding);
-      if (duplicate) {
-        return {
-          success: false,
-          error: `Duplicate post-gen: "${question.summary}" ≈ "${match.summary}"`
-        };
-      }
-      // Use the new embedding for storage
-      embedding = newEmbedding;
+    if (duplicate) {
+      return {
+        success: false,
+        error: `Duplicate: "${question.summary}" ≈ "${match.summary}" (${(match.similarity * 100).toFixed(0)}%)`
+      };
     }
 
-    // Persist to DB with embedding
+    // Step 4: Persist to DB
     await persistQuestion(question, embedding);
-
     return { success: true, question };
 
   } catch (error) {
@@ -437,7 +329,6 @@ async function generateOneQuestion(summaryModel, questionModel, modelName) {
  * Main cron handler
  */
 module.exports = async function handler(req, res) {
-  // Allow GET for manual trigger, POST for Vercel cron
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -462,63 +353,51 @@ module.exports = async function handler(req, res) {
     dailyLimitHit: false
   };
 
-  // Vercel functions have a 60s timeout (hobby) or 300s (pro)
-  // Leave buffer for response handling
   const maxRuntime = 55 * 1000;
   const startTime = Date.now();
 
   try {
-    // Check current count
     results.initialCount = await getActiveQuestionCount();
 
     if (results.initialCount >= target) {
       results.finalCount = results.initialCount;
       return res.status(200).json({
         ...results,
-        message: `Target reached (${results.initialCount}/${target}), no generation needed`
+        message: `Target reached (${results.initialCount}/${target})`
       });
     }
 
-    // Initialize Gemini models
+    // Initialize Gemini with Google Search
     const client = getGeminiClient();
-
-    // Simple model for summary generation (no tools, more focused)
-    const summaryModel = client.getGenerativeModel({ model: modelName });
-
-    // Model with Google Search for full question generation
-    const questionModel = client.getGenerativeModel({
+    const model = client.getGenerativeModel({
       model: modelName,
       tools: [{ googleSearch: {} }]
     });
 
-    // Generate questions until target reached, daily limit hit, or timeout
     const needed = target - results.initialCount;
 
     while (results.generated < needed) {
-      // Check if we're running out of time
       if (Date.now() - startTime > maxRuntime) {
-        console.log('Approaching timeout, stopping');
+        console.log('Timeout approaching, stopping');
         break;
       }
 
-      const result = await generateOneQuestion(summaryModel, questionModel, modelName);
+      const result = await generateOneQuestion(model, modelName);
 
       if (result.success) {
         results.generated++;
-        console.log(`Generated: ${result.question.summary}`);
+        console.log(`✓ Generated: ${result.question.summary}`);
       } else if (result.rateLimit) {
         const { wait, isDaily } = result.rateLimit;
 
         if (isDaily) {
-          // Daily limit - stop entirely
           results.dailyLimitHit = true;
           results.errors.push(`Daily limit: ${result.error}`);
-          console.log('Daily rate limit hit, stopping');
+          console.log('Daily limit hit, stopping');
           break;
         } else {
-          // Per-minute limit - wait and continue if we have time
           results.rateLimitWaits.push(wait);
-          console.log(`Per-minute limit, waiting ${wait}ms`);
+          console.log(`Rate limit, waiting ${Math.round(wait / 1000)}s...`);
 
           if (Date.now() - startTime + wait > maxRuntime) {
             console.log('Not enough time to wait, stopping');
@@ -526,17 +405,16 @@ module.exports = async function handler(req, res) {
           }
 
           await new Promise(r => setTimeout(r, wait));
-          // Don't count this as an error, just continue
         }
       } else if (result.error.includes('Duplicate')) {
         results.duplicates++;
-        console.log(result.error);
+        console.log(`⊘ ${result.error}`);
       } else {
         results.errors.push(result.error);
-        console.error(`Error: ${result.error}`);
+        console.log(`✗ Error: ${result.error}`);
       }
 
-      // Brief pause between generations
+      // Brief pause between attempts
       await new Promise(r => setTimeout(r, 1000));
     }
 
@@ -545,15 +423,12 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       ...results,
       message: results.dailyLimitHit
-        ? `Daily limit hit after generating ${results.generated} questions`
+        ? `Daily limit after ${results.generated} questions`
         : `Generated ${results.generated} questions (${results.finalCount}/${target})`
     });
 
   } catch (error) {
     results.errors.push(error.message);
-    return res.status(500).json({
-      ...results,
-      error: error.message
-    });
+    return res.status(500).json({ ...results, error: error.message });
   }
 };
