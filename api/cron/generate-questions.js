@@ -82,8 +82,7 @@ async function validateSourceUrl(url) {
         signal: controller.signal,
         redirect: 'follow',
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-          'Accept': 'text/html,*/*'
+          'User-Agent': 'ConfidenceBot/1.0 (+https://github.com/SleepyJack/confidence)'
         }
       });
       return response.status >= 200 && response.status < 400;
