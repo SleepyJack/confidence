@@ -390,7 +390,9 @@ module.exports = async function handler(req, res) {
     dailyLimitHit: false
   };
 
-  const maxRuntime = 55 * 1000;
+  // Vercel cron uses POST, manual triggers use GET
+  // Hobby plan has 60s timeout, but manual triggers have no limit
+  const maxRuntime = req.method === 'POST' ? 55 * 1000 : 5 * 60 * 1000;
   const startTime = Date.now();
 
   try {
