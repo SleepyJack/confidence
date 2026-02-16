@@ -61,6 +61,8 @@ async function getActiveQuestionCount() {
 
 /**
  * Validate that a source URL is reachable
+ * Lenient: URLs come from Google Search so are likely valid.
+ * We just check they resolve and aren't 404/410.
  */
 async function validateSourceUrl(url) {
   try {
@@ -70,17 +72,22 @@ async function validateSourceUrl(url) {
     }
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
+    const timer = setTimeout(() => controller.abort(), 10000);
 
     try {
+      // Use GET with a real browser User-Agent
+      // Many sites block HEAD requests and bot user agents
       const response = await fetch(url, {
-        method: 'HEAD',
+        method: 'GET',
         signal: controller.signal,
+        redirect: 'follow',
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; ConfidenceBot/1.0)'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          'Accept': 'text/html,*/*'
         }
       });
-      return response.status >= 200 && response.status < 400;
+      // Accept anything that isn't a definitive "not found"
+      return response.status !== 404 && response.status !== 410;
     } finally {
       clearTimeout(timer);
     }
