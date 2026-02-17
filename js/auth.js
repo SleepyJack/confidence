@@ -47,6 +47,8 @@ const Auth = {
 
       if (this.user) {
         await this._loadProfile();
+        // Restore user's history from Supabase
+        await this._hydrateLocalStorage();
       }
     } catch (err) {
       console.warn('Auth init failed, running in anonymous mode:', err.message);
@@ -134,7 +136,16 @@ const Auth = {
       await this._migrateLocalData(data.session.access_token);
     }
 
+    // Load user's history from Supabase into localStorage
+    await this._hydrateLocalStorage();
+
+    // Refresh game state and UI
+    Game.seenQuestions = Storage.getSeenQuestions();
     this._updateUI();
+    if (typeof UI !== 'undefined' && UI.updateStats) {
+      UI.updateStats();
+    }
+
     return data;
   },
 
@@ -176,19 +187,16 @@ const Auth = {
       const history = Storage.loadHistory();
       if (history.length === 0) return;
 
-      // Transform to API format
+      // Transform to API format (full answer data)
       const responses = history
         .filter(h => h.questionId)
         .map(h => ({
           questionId: h.questionId,
-          answer: (h.userLow + h.userHigh) / 2,
-          score: Scoring.normalizeLogScore(
-            Math.max(
-              Scoring.calculateLogScore(h.userLow, h.userHigh, h.confidence, h.correctAnswer),
-              Scoring.LOG_SCORE_FLOOR
-            )
-          ),
+          userLow: h.userLow,
+          userHigh: h.userHigh,
           confidence: h.confidence,
+          correctAnswer: h.correctAnswer,
+          isCorrect: h.isCorrect,
           answeredAt: h.timestamp || Date.now()
         }));
 
@@ -241,6 +249,10 @@ const Auth = {
           user_id: this.user.id,
           question_id: answerData.questionId,
           answer: (answerData.userLow + answerData.userHigh) / 2,
+          user_low: answerData.userLow,
+          user_high: answerData.userHigh,
+          correct_answer: answerData.correctAnswer,
+          is_correct: answerData.isCorrect,
           score: score,
           confidence: answerData.confidence
         });
@@ -265,7 +277,7 @@ const Auth = {
     try {
       const { data, error } = await this.supabase
         .from('user_responses')
-        .select('question_id, answer, score, confidence, answered_at')
+        .select('question_id, user_low, user_high, correct_answer, is_correct, confidence, answered_at')
         .eq('user_id', this.user.id)
         .order('answered_at', { ascending: true });
 
@@ -277,6 +289,45 @@ const Auth = {
     } catch (err) {
       console.warn('Load history error:', err.message);
       return null;
+    }
+  },
+
+  /**
+   * Hydrate localStorage from Supabase history.
+   * Called on login to restore user's history for stats display.
+   */
+  async _hydrateLocalStorage() {
+    if (!this.supabase || !this.user) return;
+
+    try {
+      const supabaseHistory = await this.loadHistory();
+      if (!supabaseHistory || supabaseHistory.length === 0) return;
+
+      // Transform Supabase format to localStorage format
+      const localHistory = supabaseHistory
+        .filter(r => r.user_low != null && r.user_high != null && r.correct_answer != null)
+        .map(r => ({
+          questionId: r.question_id,
+          userLow: r.user_low,
+          userHigh: r.user_high,
+          confidence: r.confidence,
+          correctAnswer: r.correct_answer,
+          isCorrect: r.is_correct,
+          timestamp: new Date(r.answered_at).getTime()
+        }));
+
+      if (localHistory.length === 0) return;
+
+      // Replace localStorage with Supabase data
+      localStorage.setItem(Storage.KEYS.HISTORY, JSON.stringify(localHistory));
+
+      // Also restore seen questions list
+      const seenIds = localHistory.map(h => h.questionId);
+      localStorage.setItem(Storage.KEYS.SEEN_QUESTIONS, JSON.stringify(seenIds));
+
+      console.log('Loaded', localHistory.length, 'responses from Supabase');
+    } catch (err) {
+      console.warn('Hydrate localStorage error:', err.message);
     }
   },
 
