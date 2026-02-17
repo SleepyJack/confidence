@@ -307,7 +307,14 @@ const Auth = {
       throw new Error(err.error || 'Failed to delete account');
     }
 
-    // Clear local state (same as logout)
+    // Sign out the Supabase session so the deleted user's token is cleared
+    try {
+      await this.supabase.auth.signOut();
+    } catch (_) {
+      // Ignore signout errors — the account is already deleted server-side
+    }
+
+    // Clear local state
     this.user = null;
     this.profile = null;
     Storage.clearHistory();
@@ -517,6 +524,19 @@ const Auth = {
   },
 
   /**
+   * Send a password reset email
+   */
+  async resetPassword(email) {
+    if (!this.supabase) throw new Error('Auth not available');
+
+    const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin
+    });
+
+    if (error) throw error;
+  },
+
+  /**
    * Update UI based on auth state
    */
   _updateUI() {
@@ -555,7 +575,6 @@ const Auth = {
       }
       authBtn.style.display = '';
       authBtn.textContent = 'Log In';
-      authBtn.onclick = () => AuthUI.showModal();
     }
   }
 };
@@ -591,10 +610,14 @@ const AuthUI = {
     // Reset confirmation message state
     const confirmationMsg = document.getElementById('confirmation-message');
     const signupForm = document.getElementById('signup-form');
+    const resetForm = document.getElementById('reset-password-form');
+    const resetMsg = document.getElementById('reset-confirmation-message');
     const tabs = document.querySelector('.auth-tabs');
 
     if (confirmationMsg) confirmationMsg.style.display = 'none';
     if (signupForm) signupForm.style.display = 'none';
+    if (resetForm) resetForm.style.display = 'none';
+    if (resetMsg) resetMsg.style.display = 'none';
     if (tabs) tabs.style.display = 'flex';
 
     // Reset to login tab
@@ -740,6 +763,18 @@ const AuthUI = {
    * Initialize event listeners for auth UI
    */
   init() {
+    // Login button — use addEventListener so it always works regardless of _updateUI state
+    const authBtn = document.getElementById('auth-btn');
+    if (authBtn) {
+      authBtn.addEventListener('click', () => {
+        if (Auth.isLoggedIn()) {
+          Auth.logOut();
+        } else {
+          AuthUI.showModal();
+        }
+      });
+    }
+
     // Tab switching
     const loginTab = document.getElementById('auth-tab-login');
     const signupTab = document.getElementById('auth-tab-signup');
@@ -770,8 +805,113 @@ const AuthUI = {
       confirmationDoneBtn.addEventListener('click', () => this.hideModal());
     }
 
+    // Password reset flow
+    const forgotLink = document.getElementById('forgot-password-link');
+    if (forgotLink) {
+      forgotLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        this._showResetForm();
+      });
+    }
+
+    const backToLoginLink = document.getElementById('back-to-login-link');
+    if (backToLoginLink) {
+      backToLoginLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        this._hideResetForm();
+      });
+    }
+
+    const resetForm = document.getElementById('reset-password-form');
+    if (resetForm) {
+      resetForm.addEventListener('submit', (e) => this.handlePasswordReset(e));
+    }
+
+    const resetDoneBtn = document.getElementById('reset-done-btn');
+    if (resetDoneBtn) {
+      resetDoneBtn.addEventListener('click', () => this.hideModal());
+    }
+
     // --- User menu dropdown ---
     this._initUserMenu();
+  },
+
+  /**
+   * Show the password reset form, hide the login form
+   */
+  _showResetForm() {
+    const loginForm = document.getElementById('login-form');
+    const resetForm = document.getElementById('reset-password-form');
+    const tabs = document.querySelector('.auth-tabs');
+
+    // Pre-fill email from login form if present
+    const loginEmail = document.getElementById('login-email');
+    const resetEmail = document.getElementById('reset-email');
+    if (loginEmail && resetEmail && loginEmail.value) {
+      resetEmail.value = loginEmail.value;
+    }
+
+    if (loginForm) loginForm.style.display = 'none';
+    if (resetForm) resetForm.style.display = '';
+    if (tabs) tabs.style.display = 'none';
+    this.clearErrors();
+  },
+
+  /**
+   * Hide the password reset form, return to login
+   */
+  _hideResetForm() {
+    const loginForm = document.getElementById('login-form');
+    const resetForm = document.getElementById('reset-password-form');
+    const tabs = document.querySelector('.auth-tabs');
+
+    if (resetForm) resetForm.style.display = 'none';
+    if (loginForm) loginForm.style.display = '';
+    if (tabs) tabs.style.display = 'flex';
+    this.clearErrors();
+  },
+
+  /**
+   * Handle password reset form submit
+   */
+  async handlePasswordReset(e) {
+    e.preventDefault();
+    const form = e.target;
+    const email = form.querySelector('[name="email"]').value.trim();
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    if (!email) {
+      this.showError('reset-password-form', 'Email is required');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+
+    try {
+      await Auth.resetPassword(email);
+      this._showResetConfirmation(email);
+    } catch (err) {
+      this.showError('reset-password-form', err.message || 'Failed to send reset email');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Send Reset Link';
+    }
+  },
+
+  /**
+   * Show the password reset confirmation message
+   */
+  _showResetConfirmation(email) {
+    const resetForm = document.getElementById('reset-password-form');
+    const resetMsg = document.getElementById('reset-confirmation-message');
+
+    if (resetForm) resetForm.style.display = 'none';
+    if (resetMsg) {
+      const emailSpan = resetMsg.querySelector('.reset-confirmation-email');
+      if (emailSpan) emailSpan.textContent = email;
+      resetMsg.style.display = 'block';
+    }
   },
 
   /**

@@ -1273,7 +1273,6 @@ input[type="range"]::-moz-range-thumb:hover {
     visibility 0.2s var(--ease),
     transform 0.2s var(--ease);
   z-index: 100;
-  overflow: hidden;
 }
 
 .user-menu.open .user-dropdown {
@@ -1568,6 +1567,31 @@ input[type="range"]::-moz-range-thumb:hover {
 
 .auth-error.visible {
   display: block;
+}
+
+/* Forgot Password Link */
+.forgot-password-link {
+  display: block;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: color 0.2s var(--ease);
+  margin-top: -4px;
+}
+
+.forgot-password-link:hover {
+  color: var(--accent);
+}
+
+/* Reset Instructions */
+.reset-instructions {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  text-align: center;
 }
 
 /* Email Confirmation Message */

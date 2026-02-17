@@ -261,7 +261,29 @@
           <input type="password" name="password" id="login-password" placeholder="Password" autocomplete="current-password">
         </div>
         <button type="submit" class="btn btn-primary btn-large">Log In</button>
+        <a href="#" id="forgot-password-link" class="forgot-password-link">Forgot password?</a>
       </form>
+
+      <!-- Password Reset Form -->
+      <form id="reset-password-form" class="auth-form" style="display:none;">
+        <div class="auth-error"></div>
+        <p class="reset-instructions">Enter your email and we'll send you a link to reset your password.</p>
+        <div class="input-group">
+          <label for="reset-email">Email</label>
+          <input type="email" name="email" id="reset-email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <button type="submit" class="btn btn-primary btn-large">Send Reset Link</button>
+        <a href="#" id="back-to-login-link" class="forgot-password-link">Back to login</a>
+      </form>
+
+      <!-- Password Reset Confirmation -->
+      <div id="reset-confirmation-message" class="confirmation-message" style="display:none;">
+        <div class="confirmation-icon">&#9993;</div>
+        <h3>Check your email</h3>
+        <p>We sent a password reset link to<br><strong class="reset-confirmation-email"></strong></p>
+        <p class="confirmation-note">Click the link in the email to set a new password.</p>
+        <button type="button" id="reset-done-btn" class="btn btn-primary btn-large">Got it</button>
+      </div>
 
       <!-- Signup Form -->
       <form id="signup-form" class="auth-form" style="display:none;">
