@@ -1104,6 +1104,32 @@ input[type="range"]::-moz-range-thumb:hover {
   line-height: 1.55;
 }
 
+.welcome-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-strong);
+}
+
+.btn-secondary:hover {
+  color: var(--accent);
+  border-color: rgba(226, 168, 75, 0.3);
+  background: var(--accent-dim);
+}
+
+.welcome-note {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+}
+
 /* ==========================================================================
    Auth Header
    ========================================================================== */

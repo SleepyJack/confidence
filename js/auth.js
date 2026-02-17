@@ -150,7 +150,7 @@ const Auth = {
   },
 
   /**
-   * Log out
+   * Log out — clears local data and returns to welcome screen
    */
   async logOut() {
     if (!this.supabase) return;
@@ -158,7 +158,18 @@ const Auth = {
     await this.supabase.auth.signOut();
     this.user = null;
     this.profile = null;
+
+    // Clear localStorage (user's data is in Supabase)
+    Storage.clearHistory();
+    Game.seenQuestions = [];
+    Game.currentQuestion = null;
+
+    // Update UI and show welcome modal
     this._updateUI();
+    if (typeof UI !== 'undefined') {
+      UI.updateStats();
+      UI.showWelcome();
+    }
   },
 
   /**

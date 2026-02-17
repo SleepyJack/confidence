@@ -54,6 +54,7 @@ const UI = {
       // Modal
       welcomeModal: document.getElementById('welcome-modal'),
       startBtn: document.getElementById('start-btn'),
+      welcomeAuthBtn: document.getElementById('welcome-auth-btn'),
       resetBtn: document.getElementById('reset-btn')
     };
 
@@ -85,8 +86,16 @@ const UI = {
     // Next button
     this.elements.nextBtn.addEventListener('click', () => this.handleNext());
 
-    // Start button
+    // Start button (continue as guest)
     this.elements.startBtn.addEventListener('click', () => this.handleStart());
+
+    // Welcome auth button (sign up / log in from welcome screen)
+    if (this.elements.welcomeAuthBtn) {
+      this.elements.welcomeAuthBtn.addEventListener('click', () => {
+        this.elements.welcomeModal.classList.remove('active');
+        AuthUI.showModal('signup');
+      });
+    }
 
     // Reset button
     this.elements.resetBtn.addEventListener('click', () => this.handleReset());
