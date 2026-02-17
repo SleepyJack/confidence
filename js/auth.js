@@ -521,21 +521,41 @@ const Auth = {
    */
   _updateUI() {
     const authBtn = document.getElementById('auth-btn');
-    const userInfo = document.getElementById('user-info');
+    const userMenu = document.getElementById('user-menu');
     const userHandle = document.getElementById('user-handle');
+    const userAvatar = document.getElementById('user-avatar');
+    const dropdownHandle = document.getElementById('dropdown-handle');
+    const dropdownEmail = document.getElementById('dropdown-email');
+    const dropdownAvatar = document.getElementById('dropdown-avatar');
 
     if (!authBtn) return; // UI not ready yet
 
     if (this.isLoggedIn()) {
-      authBtn.textContent = 'Log Out';
-      authBtn.onclick = () => this.logOut();
-      if (userInfo) userInfo.classList.add('visible');
-      if (userHandle) userHandle.textContent = this.getDisplayName();
+      const name = this.getDisplayName() || '';
+      const initial = name.charAt(0).toUpperCase();
+      const email = this.user?.email || '';
+
+      // Show user menu, hide login button
+      if (userMenu) userMenu.style.display = '';
+      authBtn.style.display = 'none';
+
+      // Update trigger
+      if (userHandle) userHandle.textContent = name;
+      if (userAvatar) userAvatar.textContent = initial;
+
+      // Update dropdown
+      if (dropdownHandle) dropdownHandle.textContent = name;
+      if (dropdownEmail) dropdownEmail.textContent = email;
+      if (dropdownAvatar) dropdownAvatar.textContent = initial;
     } else {
+      // Hide user menu, show login button
+      if (userMenu) {
+        userMenu.style.display = 'none';
+        userMenu.classList.remove('open');
+      }
+      authBtn.style.display = '';
       authBtn.textContent = 'Log In';
       authBtn.onclick = () => AuthUI.showModal();
-      if (userInfo) userInfo.classList.remove('visible');
-      if (userHandle) userHandle.textContent = '';
     }
   }
 };
@@ -750,26 +770,123 @@ const AuthUI = {
       confirmationDoneBtn.addEventListener('click', () => this.hideModal());
     }
 
-    // Delete account link
-    const deleteLink = document.getElementById('delete-account-link');
-    if (deleteLink) {
-      deleteLink.addEventListener('click', async (e) => {
-        e.preventDefault();
-        if (!Auth.isLoggedIn()) return;
+    // --- User menu dropdown ---
+    this._initUserMenu();
+  },
 
-        const confirmed = confirm(
-          'Are you sure you want to delete your account?\n\n' +
-          'This will permanently delete all your data and cannot be undone.'
-        );
+  /**
+   * Initialize the user menu dropdown and its actions
+   */
+  _initUserMenu() {
+    const trigger = document.getElementById('user-menu-trigger');
+    const menu = document.getElementById('user-menu');
+    const dropdown = document.getElementById('user-dropdown');
 
-        if (confirmed) {
-          try {
-            await Auth.deleteAccount();
-          } catch (err) {
-            alert('Failed to delete account: ' + err.message);
+    if (!trigger || !menu) return;
+
+    // Toggle dropdown
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = menu.classList.contains('open');
+      if (isOpen) {
+        this._closeUserMenu();
+      } else {
+        this._resetDeleteConfirm();
+        menu.classList.add('open');
+      }
+    });
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+      if (menu.classList.contains('open') && !menu.contains(e.target)) {
+        this._closeUserMenu();
+      }
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && menu.classList.contains('open')) {
+        this._closeUserMenu();
+      }
+    });
+
+    // Logout button
+    const logoutBtn = document.getElementById('dropdown-logout');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        this._closeUserMenu();
+        Auth.logOut();
+      });
+    }
+
+    // Delete account flow
+    const deleteBtn = document.getElementById('dropdown-delete');
+    const deleteConfirm = document.getElementById('dropdown-delete-confirm');
+    const cancelBtn = document.getElementById('delete-cancel-btn');
+    const proceedBtn = document.getElementById('delete-confirm-btn');
+
+    if (deleteBtn && deleteConfirm) {
+      deleteBtn.addEventListener('click', () => {
+        // Show confirmation, hide normal items
+        deleteBtn.style.display = 'none';
+        deleteConfirm.style.display = 'block';
+      });
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        this._resetDeleteConfirm();
+      });
+    }
+
+    if (proceedBtn) {
+      proceedBtn.addEventListener('click', async () => {
+        proceedBtn.disabled = true;
+        proceedBtn.textContent = 'Deleting...';
+        try {
+          await Auth.deleteAccount();
+          this._closeUserMenu();
+        } catch (err) {
+          proceedBtn.disabled = false;
+          proceedBtn.textContent = 'Delete';
+          // Show inline error
+          const text = document.querySelector('.delete-confirm-text');
+          if (text) {
+            text.textContent = 'Failed: ' + err.message;
+            text.style.color = 'var(--error)';
           }
         }
       });
+    }
+  },
+
+  /**
+   * Close the user menu dropdown
+   */
+  _closeUserMenu() {
+    const menu = document.getElementById('user-menu');
+    if (menu) menu.classList.remove('open');
+    this._resetDeleteConfirm();
+  },
+
+  /**
+   * Reset the delete confirmation back to default state
+   */
+  _resetDeleteConfirm() {
+    const deleteBtn = document.getElementById('dropdown-delete');
+    const deleteConfirm = document.getElementById('dropdown-delete-confirm');
+    const proceedBtn = document.getElementById('delete-confirm-btn');
+    const text = document.querySelector('.delete-confirm-text');
+
+    if (deleteBtn) deleteBtn.style.display = '';
+    if (deleteConfirm) deleteConfirm.style.display = 'none';
+    if (proceedBtn) {
+      proceedBtn.disabled = false;
+      proceedBtn.textContent = 'Delete';
+    }
+    if (text) {
+      text.textContent = 'This permanently deletes your account and all data. This cannot be undone.';
+      text.style.color = '';
     }
   }
 };
