@@ -1329,6 +1329,50 @@ input[type="range"]::-moz-range-thumb:hover {
   display: block;
 }
 
+/* Email Confirmation Message */
+.confirmation-message {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.confirmation-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  background: var(--accent-dim);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  color: var(--accent);
+}
+
+.confirmation-message h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.confirmation-message p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.confirmation-message .confirmation-email {
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+.confirmation-note {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  margin-top: 16px;
+  margin-bottom: 24px;
+}
+
 /* ==========================================================================
    Footer
    ========================================================================== */

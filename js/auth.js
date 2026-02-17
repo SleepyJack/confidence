@@ -35,9 +35,21 @@ const Auth = {
       // Create browser-side Supabase client
       this.supabase = window.supabase.createClient(url, anonKey);
 
-      // Listen for auth state changes
-      this.supabase.auth.onAuthStateChange((event, session) => {
+      // Listen for auth state changes (including email confirmation)
+      this.supabase.auth.onAuthStateChange(async (event, session) => {
+        const wasLoggedOut = !this.user;
         this.user = session?.user || null;
+
+        // Handle email confirmation: user just confirmed and logged in
+        if (this.user && wasLoggedOut && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
+          await this._completeSignup();
+          await this._hydrateLocalStorage();
+          Game.seenQuestions = Storage.getSeenQuestions();
+          if (typeof UI !== 'undefined' && UI.updateStats) {
+            UI.updateStats();
+          }
+        }
+
         this._updateUI();
       });
 
@@ -46,7 +58,8 @@ const Auth = {
       this.user = session?.user || null;
 
       if (this.user) {
-        await this._loadProfile();
+        // Complete signup if needed (e.g., returning after email confirmation)
+        await this._completeSignup();
         // Restore user's history from Supabase
         await this._hydrateLocalStorage();
       }
@@ -73,6 +86,7 @@ const Auth = {
 
   /**
    * Sign up with email + password + handle
+   * If email confirmation is enabled, stores handle for later profile creation
    */
   async signUp(email, password, handle) {
     if (!this.supabase) throw new Error('Auth not available');
@@ -86,33 +100,80 @@ const Auth = {
     if (error) throw error;
     if (!data.user) throw new Error('Signup failed — no user returned');
 
-    // 2. Create profile with handle
+    // 2. Check if we have a session (email confirmation disabled) or not (confirmation required)
     const session = data.session;
+
     if (session) {
-      const profileResp = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ handle })
-      });
-
-      if (!profileResp.ok) {
-        const err = await profileResp.json();
-        // Clean up: auth user exists but profile failed — user can retry handle later
-        throw new Error(err.error || 'Failed to create profile');
-      }
-
+      // Email confirmation disabled — create profile immediately
+      await this._createProfile(session.access_token, handle);
       this.profile = { handle };
-
-      // 3. Migrate localStorage data
       await this._migrateLocalData(session.access_token);
+      this.user = data.user;
+      this._updateUI();
+      return { ...data, confirmationRequired: false };
+    } else {
+      // Email confirmation required — store handle for after confirmation
+      localStorage.setItem('pending_handle', handle);
+      return { ...data, confirmationRequired: true };
+    }
+  },
+
+  /**
+   * Create user profile with handle
+   */
+  async _createProfile(accessToken, handle) {
+    const profileResp = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({ handle })
+    });
+
+    if (!profileResp.ok) {
+      const err = await profileResp.json();
+      throw new Error(err.error || 'Failed to create profile');
+    }
+  },
+
+  /**
+   * Complete signup after email confirmation
+   * Called when a user logs in and doesn't have a profile yet
+   */
+  async _completeSignup() {
+    if (!this.supabase || !this.user) return;
+
+    // Check if profile exists
+    const { data: profile } = await this.supabase
+      .from('user_profiles')
+      .select('handle')
+      .eq('id', this.user.id)
+      .single();
+
+    if (profile) {
+      // Profile already exists
+      this.profile = { handle: profile.handle };
+      return;
     }
 
-    this.user = data.user;
-    this._updateUI();
-    return data;
+    // No profile — check for pending handle from signup
+    const pendingHandle = localStorage.getItem('pending_handle');
+    if (pendingHandle) {
+      try {
+        const token = await this.getAccessToken();
+        await this._createProfile(token, pendingHandle);
+        this.profile = { handle: pendingHandle };
+        localStorage.removeItem('pending_handle');
+
+        // Migrate any localStorage data
+        await this._migrateLocalData(token);
+      } catch (err) {
+        console.warn('Failed to complete signup:', err.message);
+        // Handle will need to be set manually
+        localStorage.removeItem('pending_handle');
+      }
+    }
   },
 
   /**
@@ -450,13 +511,25 @@ const AuthUI = {
   },
 
   /**
-   * Hide the auth modal
+   * Hide the auth modal and reset state
    */
   hideModal() {
     const modal = document.getElementById('auth-modal');
     if (!modal) return;
     modal.classList.remove('active');
     this.clearErrors();
+
+    // Reset confirmation message state
+    const confirmationMsg = document.getElementById('confirmation-message');
+    const signupForm = document.getElementById('signup-form');
+    const tabs = document.querySelector('.auth-tabs');
+
+    if (confirmationMsg) confirmationMsg.style.display = 'none';
+    if (signupForm) signupForm.style.display = 'none';
+    if (tabs) tabs.style.display = 'flex';
+
+    // Reset to login tab
+    this.switchMode('login');
   },
 
   /**
@@ -558,14 +631,40 @@ const AuthUI = {
     submitBtn.textContent = 'Creating account...';
 
     try {
-      await Auth.signUp(email, password, handle);
-      AuthUI.hideModal();
+      const result = await Auth.signUp(email, password, handle);
+
+      if (result.confirmationRequired) {
+        // Email confirmation required — show success message
+        AuthUI.showConfirmationMessage(email);
+      } else {
+        // No confirmation needed — close modal and proceed
+        AuthUI.hideModal();
+      }
     } catch (err) {
       AuthUI.showError('signup-form', err.message || 'Signup failed');
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Create Account';
     }
+  },
+
+  /**
+   * Show email confirmation message
+   */
+  showConfirmationMessage(email) {
+    const signupForm = document.getElementById('signup-form');
+    const confirmationMsg = document.getElementById('confirmation-message');
+
+    if (signupForm) signupForm.style.display = 'none';
+    if (confirmationMsg) {
+      const emailSpan = confirmationMsg.querySelector('.confirmation-email');
+      if (emailSpan) emailSpan.textContent = email;
+      confirmationMsg.style.display = 'block';
+    }
+
+    // Hide tabs when showing confirmation
+    const tabs = document.querySelector('.auth-tabs');
+    if (tabs) tabs.style.display = 'none';
   },
 
   /**
@@ -595,6 +694,12 @@ const AuthUI = {
     // Close button
     const closeBtn = document.getElementById('auth-modal-close');
     if (closeBtn) closeBtn.addEventListener('click', () => this.hideModal());
+
+    // Confirmation done button (email verification flow)
+    const confirmationDoneBtn = document.getElementById('confirmation-done-btn');
+    if (confirmationDoneBtn) {
+      confirmationDoneBtn.addEventListener('click', () => this.hideModal());
+    }
 
     // Delete account link
     const deleteLink = document.getElementById('delete-account-link');
