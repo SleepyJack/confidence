@@ -4,10 +4,10 @@
 
 async function initApp() {
   try {
-    // Initialize auth first (non-blocking for anonymous users)
-    Auth.init();
+    // Initialize auth first — wait for session restore and localStorage hydration
+    await Auth.init();
 
-    // Initialize game (loads seen-questions from localStorage)
+    // Initialize game (loads seen-questions from localStorage, now hydrated if logged in)
     Game.init();
 
     // Initialize auth UI event listeners
