@@ -16,7 +16,15 @@
   <div class="container">
     <!-- Header -->
     <header>
-      <div class="header-badge">Calibrate</div>
+      <div class="header-top">
+        <div class="header-badge">Calibrate</div>
+        <div class="header-auth">
+          <span id="user-info" class="user-info">
+            <span id="user-handle" class="user-handle"></span>
+          </span>
+          <button id="auth-btn" class="btn btn-auth">Log In</button>
+        </div>
+      </div>
       <h1>How well do you <em>know</em> what you know?</h1>
       <p class="subtitle">How good is your world knowledge when it comes to numerical data? Are you overconfident or underconfident? Test yourself, track your results, and calibrate your confidence level!</p>
     </header>
@@ -188,6 +196,51 @@
     <span id="version-info">v1.0.0</span>
   </footer>
 
+  <!-- Auth Modal -->
+  <div id="auth-modal" class="modal">
+    <div class="modal-content auth-modal-content">
+      <button id="auth-modal-close" class="auth-modal-close">&times;</button>
+      <div class="modal-badge">Account</div>
+
+      <div class="auth-tabs">
+        <button id="auth-tab-login" class="auth-tab active">Log In</button>
+        <button id="auth-tab-signup" class="auth-tab">Sign Up</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" class="auth-form">
+        <div class="auth-error"></div>
+        <div class="input-group">
+          <label for="login-email">Email</label>
+          <input type="email" name="email" id="login-email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="input-group">
+          <label for="login-password">Password</label>
+          <input type="password" name="password" id="login-password" placeholder="Password" autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-large">Log In</button>
+      </form>
+
+      <!-- Signup Form -->
+      <form id="signup-form" class="auth-form" style="display:none;">
+        <div class="auth-error"></div>
+        <div class="input-group">
+          <label for="signup-handle">Handle</label>
+          <input type="text" name="handle" id="signup-handle" placeholder="your-handle" autocomplete="username" maxlength="30">
+        </div>
+        <div class="input-group">
+          <label for="signup-email">Email</label>
+          <input type="email" name="email" id="signup-email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="input-group">
+          <label for="signup-password">Password</label>
+          <input type="password" name="password" id="signup-password" placeholder="Min 6 characters" autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-large">Create Account</button>
+      </form>
+    </div>
+  </div>
+
   <!-- Welcome Modal -->
   <div id="welcome-modal" class="modal">
     <div class="modal-content">
@@ -234,10 +287,13 @@
 
   <!-- Load Chart.js library -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Supabase JS client (browser) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
   <!-- Load JavaScript modules -->
   <script src="js/storage.js"></script>
   <script src="js/scoring.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/chart.js"></script>
   <script src="js/distribution.js"></script>
   <script src="js/game.js"></script>

@@ -2,12 +2,18 @@
  * Main entry point - initializes the application
  */
 
-function initApp() {
+async function initApp() {
   try {
+    // Initialize auth first (non-blocking for anonymous users)
+    Auth.init();
+
     // Initialize game (loads seen-questions from localStorage)
     Game.init();
 
-    // Initialize UI
+    // Initialize auth UI event listeners
+    AuthUI.init();
+
+    // Initialize game UI
     UI.init();
 
     // Version display — non-blocking, reads from config.json

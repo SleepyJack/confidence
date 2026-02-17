@@ -8,6 +8,7 @@ The app stores questions in a Supabase Postgres database. Both production and in
 |---|---|
 | `SUPABASE_URL` | Project URL (e.g. `https://xyz.supabase.co`) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server-side only, bypasses RLS) |
+| `SUPABASE_ANON_KEY` | Anon/public key (safe to expose to browser, used for client-side auth) |
 
 Set these in your Vercel project settings for production, and in your shell (or `.env`) for local development and tests.
 

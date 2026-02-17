@@ -70,10 +70,15 @@ const Game = {
       category: this.currentQuestion.category
     };
 
-    // Save answer
+    // Always save to localStorage (fallback / anonymous)
     Storage.saveAnswer(answerData);
     Storage.markQuestionSeen(this.currentQuestion.id);
     this.seenQuestions.push(this.currentQuestion.id);
+
+    // Also save to Supabase if logged in (fire-and-forget)
+    if (Auth.isLoggedIn()) {
+      Auth.saveResponse(answerData).catch(() => {});
+    }
 
     return answerData;
   },

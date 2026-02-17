@@ -128,24 +128,25 @@ ORDER BY sim DESC;
 
 Move user data out of localStorage into a proper backend.
 
-### Stack Addition: Supabase
+### 3a: Email/Password Auth — Complete ✓
 
-Supabase covers almost everything:
-- **PostgreSQL** database for questions, users, and responses
-- **Built-in REST API** — CRUD on tables with no backend code
-- **Built-in Auth** — social login, email/password, row-level security
-- Free tier: 500MB storage, 2GB bandwidth
+- **Database tables**: `user_profiles` (handle) + `user_responses` (answer history) with RLS policies
+- **Browser-side Supabase client**: loaded via CDN, initialized from `/api/auth/config`
+- **Auth module** (`js/auth.js`): signup, login, logout, session restore via `onAuthStateChange`
+- **Auth UI**: login/signup modal with tabbed forms, header shows handle + logout button
+- **API endpoints**:
+  - `POST /api/auth/signup` — creates user_profiles row with handle after Supabase Auth signup
+  - `POST /api/auth/migrate` — bulk-inserts localStorage history into user_responses on first login
+  - `GET /api/auth/config` — returns public Supabase URL + anon key for browser client
+- **Dual-write**: answers saved to both localStorage (anonymous fallback) and Supabase (when logged in)
+- **localStorage migration**: on first login, existing history is sent to `/api/auth/migrate`, then cleared
+- **Environment variable**: requires `SUPABASE_ANON_KEY` in addition to existing `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
 
-### What Changes
+### 3b: Future — Social Auth, Cloud-Only History
 
-- User responses stored in Supabase instead of localStorage
-- Per-user history synced to cloud
-- Precision Score and Over/Under Confidence calculated server-side (or client-side from synced history)
-- Questions table replaces `questions.json` — same data, queryable
-
-### Migration
-
-localStorage data can be migrated on first login: read from localStorage, POST to Supabase, clear localStorage.
+- Social login (OAuth providers) — skipped for now
+- Server-side metric calculation from Supabase history
+- Full cloud-only mode (drop localStorage for logged-in users)
 
 ---
 

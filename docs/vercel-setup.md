@@ -20,7 +20,8 @@ Go to your Vercel project → **Settings** → **Environment Variables** and add
 | Variable | Required | Description |
 |---|---|---|
 | `SUPABASE_URL` | Yes | Supabase project URL (see [supabase-setup.md](supabase-setup.md)) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (server-side, bypasses RLS) |
+| `SUPABASE_ANON_KEY` | Yes | Supabase anon/public key (exposed to browser for auth) |
 | `GEMINI_API_KEY` | Yes | Google Gemini API key for question generation |
 
 Changes take effect on the next deployment.
