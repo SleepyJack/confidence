@@ -4,6 +4,18 @@
  * These are public values (safe to expose — RLS enforces access control).
  */
 
+const fs = require('fs');
+const path = require('path');
+
+// Load config.json
+let appConfig = {};
+try {
+  const configPath = path.join(__dirname, '../../config.json');
+  appConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+} catch (err) {
+  console.warn('Failed to load config.json:', err.message);
+}
+
 module.exports = (req, res) => {
   const url = process.env.SUPABASE_URL;
   const anonKey = process.env.SUPABASE_ANON_KEY;
@@ -14,5 +26,9 @@ module.exports = (req, res) => {
 
   // Cache aggressively — these values don't change
   res.setHeader('Cache-Control', 'public, max-age=3600');
-  res.json({ url, anonKey });
+  res.json({
+    url,
+    anonKey,
+    emailConfirmation: appConfig.auth?.emailConfirmation ?? true
+  });
 };

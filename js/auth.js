@@ -15,6 +15,7 @@ const Auth = {
   _ready: false,
   _readyPromise: null,
   _readyResolve: null,
+  _emailConfirmation: true, // from config.json
 
   /**
    * Initialize auth — fetch config and restore session.
@@ -30,7 +31,10 @@ const Auth = {
         this._finishInit();
         return;
       }
-      const { url, anonKey } = await resp.json();
+      const { url, anonKey, emailConfirmation } = await resp.json();
+
+      // Store email confirmation setting from config
+      this._emailConfirmation = emailConfirmation !== false;
 
       // Create browser-side Supabase client
       this.supabase = window.supabase.createClient(url, anonKey);
@@ -86,11 +90,19 @@ const Auth = {
 
   /**
    * Sign up with email + password + handle
-   * If email confirmation is enabled, stores handle for later profile creation
+   * Uses server-side registration when email confirmation is disabled (config.json)
+   * Uses client-side Supabase auth when email confirmation is enabled
    */
   async signUp(email, password, handle) {
     if (!this.supabase) throw new Error('Auth not available');
 
+    // When email confirmation is disabled, use server-side registration
+    // This creates the user with auto-confirmation via admin API
+    if (!this._emailConfirmation) {
+      return await this._signUpServerSide(email, password, handle);
+    }
+
+    // Email confirmation enabled — use client-side Supabase auth
     // 1. Create auth user
     const { data, error } = await this.supabase.auth.signUp({
       email,
@@ -100,11 +112,11 @@ const Auth = {
     if (error) throw error;
     if (!data.user) throw new Error('Signup failed — no user returned');
 
-    // 2. Check if we have a session (email confirmation disabled) or not (confirmation required)
+    // 2. Check if we have a session (Supabase confirmation disabled) or not (confirmation required)
     const session = data.session;
 
     if (session) {
-      // Email confirmation disabled — create profile immediately
+      // Supabase returned a session — create profile immediately
       await this._createProfile(session.access_token, handle);
       this.profile = { handle };
       await this._migrateLocalData(session.access_token);
@@ -116,6 +128,43 @@ const Auth = {
       localStorage.setItem('pending_handle', handle);
       return { ...data, confirmationRequired: true };
     }
+  },
+
+  /**
+   * Server-side signup — creates user with auto-confirmation
+   * Used when emailConfirmation is false in config.json
+   */
+  async _signUpServerSide(email, password, handle) {
+    const resp = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, handle })
+    });
+
+    const result = await resp.json();
+
+    if (!resp.ok) {
+      throw new Error(result.error || 'Signup failed');
+    }
+
+    // User created with auto-confirmation — now sign them in
+    const { data: signInData, error: signInError } = await this.supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (signInError) throw signInError;
+
+    this.user = signInData.user;
+    this.profile = { handle: result.handle };
+
+    // Migrate any localStorage data
+    if (signInData.session) {
+      await this._migrateLocalData(signInData.session.access_token);
+    }
+
+    this._updateUI();
+    return { user: signInData.user, confirmationRequired: false };
   },
 
   /**
