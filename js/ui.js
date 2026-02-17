@@ -53,8 +53,13 @@ const UI = {
       confidenceBiasChartCanvas: document.getElementById('confidence-bias-chart-canvas'),
       // Modal
       welcomeModal: document.getElementById('welcome-modal'),
+      welcomeGuest: document.getElementById('welcome-guest'),
+      welcomeUser: document.getElementById('welcome-user'),
+      welcomeHandleDisplay: document.querySelector('.welcome-handle-display'),
       startBtn: document.getElementById('start-btn'),
       welcomeAuthBtn: document.getElementById('welcome-auth-btn'),
+      continueBtn: document.getElementById('continue-btn'),
+      welcomeLogoutBtn: document.getElementById('welcome-logout-btn'),
       resetBtn: document.getElementById('reset-btn')
     };
 
@@ -62,12 +67,19 @@ const UI = {
     Chart.init(this.elements.chartCanvas, this.elements.confidenceBiasChartCanvas);
     Distribution.init(this.elements.distributionCanvas);
 
-    // Show welcome modal on first visit, otherwise resume game
-    if (Storage.loadHistory().length === 0) {
+    // Decide whether to show welcome or resume game
+    const hasHistory = Storage.loadHistory().length > 0;
+    const isLoggedIn = Auth.isLoggedIn();
+
+    if (hasHistory) {
+      // Has data — resume game (works for both logged-in and guest with localStorage)
+      this.loadNewQuestion();
+    } else if (isLoggedIn) {
+      // Logged in but no data (e.g., new account) — show logged-in welcome
       this.showWelcome();
     } else {
-      // Resume existing session - load next question and show stats
-      this.loadNewQuestion();
+      // No data and not logged in — show guest welcome
+      this.showWelcome();
     }
   },
 
@@ -97,6 +109,20 @@ const UI = {
       });
     }
 
+    // Continue button (logged-in users)
+    if (this.elements.continueBtn) {
+      this.elements.continueBtn.addEventListener('click', () => this.handleStart());
+    }
+
+    // Welcome logout button
+    if (this.elements.welcomeLogoutBtn) {
+      this.elements.welcomeLogoutBtn.addEventListener('click', async () => {
+        await Auth.logOut();
+        // logOut already shows welcome, but we need to switch to guest state
+        this.showWelcome();
+      });
+    }
+
     // Reset button
     this.elements.resetBtn.addEventListener('click', () => this.handleReset());
 
@@ -112,9 +138,26 @@ const UI = {
   },
 
   /**
-   * Show welcome modal
+   * Show welcome modal — switches between guest and logged-in states
    */
   showWelcome() {
+    const isLoggedIn = Auth.isLoggedIn();
+
+    if (isLoggedIn) {
+      // Show logged-in welcome
+      this.elements.welcomeGuest.style.display = 'none';
+      this.elements.welcomeUser.style.display = 'block';
+      // Update handle display
+      const displayName = Auth.getDisplayName();
+      if (this.elements.welcomeHandleDisplay) {
+        this.elements.welcomeHandleDisplay.textContent = displayName || '';
+      }
+    } else {
+      // Show guest welcome
+      this.elements.welcomeGuest.style.display = 'block';
+      this.elements.welcomeUser.style.display = 'none';
+    }
+
     this.elements.welcomeModal.classList.add('active');
   },
 

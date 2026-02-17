@@ -247,47 +247,62 @@
   <div id="welcome-modal" class="modal">
     <div class="modal-content">
       <div class="modal-badge">Welcome</div>
-      <h2>Calibrate</h2>
-      <p class="modal-lead">Discover the gap between what you think you know and what you actually know.</p>
 
-      <div class="instructions">
-        <div class="instruction-grid">
-          <div class="instruction-step">
-            <span class="step-number">01</span>
-            <div>
-              <strong>Read the question</strong>
-              <p>You'll estimate a numerical value &mdash; distances, dates, measurements.</p>
+      <!-- Guest welcome (default) -->
+      <div id="welcome-guest" class="welcome-state">
+        <h2>Calibrate</h2>
+        <p class="modal-lead">Discover the gap between what you think you know and what you actually know.</p>
+
+        <div class="instructions">
+          <div class="instruction-grid">
+            <div class="instruction-step">
+              <span class="step-number">01</span>
+              <div>
+                <strong>Read the question</strong>
+                <p>You'll estimate a numerical value &mdash; distances, dates, measurements.</p>
+              </div>
             </div>
-          </div>
-          <div class="instruction-step">
-            <span class="step-number">02</span>
-            <div>
-              <strong>Set your range</strong>
-              <p>Enter a low and high bound that you believe contains the answer.</p>
+            <div class="instruction-step">
+              <span class="step-number">02</span>
+              <div>
+                <strong>Set your range</strong>
+                <p>Enter a low and high bound that you believe contains the answer.</p>
+              </div>
             </div>
-          </div>
-          <div class="instruction-step">
-            <span class="step-number">03</span>
-            <div>
-              <strong>State your confidence</strong>
-              <p>How sure are you that your range captures the truth? 50% to 99%.</p>
+            <div class="instruction-step">
+              <span class="step-number">03</span>
+              <div>
+                <strong>State your confidence</strong>
+                <p>How sure are you that your range captures the truth? 50% to 99%.</p>
+              </div>
             </div>
-          </div>
-          <div class="instruction-step">
-            <span class="step-number">04</span>
-            <div>
-              <strong>Track your calibration</strong>
-              <p>If you say 80% confident, you should be right ~80% of the time.</p>
+            <div class="instruction-step">
+              <span class="step-number">04</span>
+              <div>
+                <strong>Track your calibration</strong>
+                <p>If you say 80% confident, you should be right ~80% of the time.</p>
+              </div>
             </div>
           </div>
         </div>
+
+        <div class="welcome-actions">
+          <button id="start-btn" class="btn btn-primary btn-large">Continue as Guest</button>
+          <button id="welcome-auth-btn" class="btn btn-secondary btn-large">Sign Up / Log In</button>
+        </div>
+        <p class="welcome-note">Create an account to save your progress across devices.</p>
       </div>
 
-      <div class="welcome-actions">
-        <button id="start-btn" class="btn btn-primary btn-large">Continue as Guest</button>
-        <button id="welcome-auth-btn" class="btn btn-secondary btn-large">Sign Up / Log In</button>
+      <!-- Logged-in welcome -->
+      <div id="welcome-user" class="welcome-state" style="display: none;">
+        <h2>Welcome back</h2>
+        <p class="modal-lead welcome-handle-display"></p>
+
+        <div class="welcome-actions">
+          <button id="continue-btn" class="btn btn-primary btn-large">Continue</button>
+          <button id="welcome-logout-btn" class="btn btn-secondary btn-large">Log Out</button>
+        </div>
       </div>
-      <p class="welcome-note">Create an account to save your progress across devices.</p>
     </div>
   </div>
 

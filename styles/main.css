@@ -1130,6 +1130,25 @@ input[type="range"]::-moz-range-thumb:hover {
   letter-spacing: 0.02em;
 }
 
+.welcome-state {
+  text-align: center;
+}
+
+.welcome-handle-display {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 1.2rem;
+}
+
+#welcome-user h2 {
+  margin-bottom: 8px;
+}
+
+#welcome-user .welcome-actions {
+  margin-top: 32px;
+}
+
 /* ==========================================================================
    Auth Header
    ========================================================================== */
