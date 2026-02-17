@@ -599,6 +599,17 @@ const AuthUI = {
   },
 
   /**
+   * Dismiss the auth modal — if the game hasn't started, return to welcome screen
+   */
+  _dismissModal() {
+    this.hideModal();
+    // If not logged in and no game in progress, show welcome again
+    if (!Auth.isLoggedIn() && typeof UI !== 'undefined' && !Game.currentQuestion) {
+      UI.showWelcome();
+    }
+  },
+
+  /**
    * Hide the auth modal and reset state
    */
   hideModal() {
@@ -690,6 +701,10 @@ const AuthUI = {
     try {
       await Auth.logIn(email, password);
       AuthUI.hideModal();
+      // Start the game if no question is loaded yet
+      if (typeof UI !== 'undefined' && !Game.currentQuestion) {
+        UI.handleStart();
+      }
     } catch (err) {
       AuthUI.showError('login-form', err.message || 'Login failed');
     } finally {
@@ -729,8 +744,11 @@ const AuthUI = {
         // Email confirmation required — show success message
         AuthUI.showConfirmationMessage(email);
       } else {
-        // No confirmation needed — close modal and proceed
+        // No confirmation needed — close modal and start game
         AuthUI.hideModal();
+        if (typeof UI !== 'undefined' && !Game.currentQuestion) {
+          UI.handleStart();
+        }
       }
     } catch (err) {
       AuthUI.showError('signup-form', err.message || 'Signup failed');
@@ -791,13 +809,13 @@ const AuthUI = {
     const modal = document.getElementById('auth-modal');
     if (modal) {
       modal.addEventListener('click', (e) => {
-        if (e.target === modal) this.hideModal();
+        if (e.target === modal) this._dismissModal();
       });
     }
 
     // Close button
     const closeBtn = document.getElementById('auth-modal-close');
-    if (closeBtn) closeBtn.addEventListener('click', () => this.hideModal());
+    if (closeBtn) closeBtn.addEventListener('click', () => this._dismissModal());
 
     // Confirmation done button (email verification flow)
     const confirmationDoneBtn = document.getElementById('confirmation-done-btn');
@@ -966,21 +984,24 @@ const AuthUI = {
     const proceedBtn = document.getElementById('delete-confirm-btn');
 
     if (deleteBtn && deleteConfirm) {
-      deleteBtn.addEventListener('click', () => {
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         // Show confirmation, hide normal items
         deleteBtn.style.display = 'none';
-        deleteConfirm.style.display = 'block';
+        deleteConfirm.style.display = '';
       });
     }
 
     if (cancelBtn) {
-      cancelBtn.addEventListener('click', () => {
+      cancelBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         this._resetDeleteConfirm();
       });
     }
 
     if (proceedBtn) {
-      proceedBtn.addEventListener('click', async () => {
+      proceedBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
         proceedBtn.disabled = true;
         proceedBtn.textContent = 'Deleting...';
         try {

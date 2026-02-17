@@ -6,6 +6,6 @@
     "model": "gemini-2.5-flash"
   },
   "auth": {
-    "emailConfirmation": true
+    "emailConfirmation": false
   }
 }
