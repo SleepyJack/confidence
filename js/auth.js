@@ -173,6 +173,45 @@ const Auth = {
   },
 
   /**
+   * Delete account — permanently removes user and all their data
+   */
+  async deleteAccount() {
+    if (!this.supabase || !this.user) {
+      throw new Error('Not logged in');
+    }
+
+    const token = await this.getAccessToken();
+    if (!token) {
+      throw new Error('No valid session');
+    }
+
+    const resp = await fetch('/api/auth/delete', {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.error || 'Failed to delete account');
+    }
+
+    // Clear local state (same as logout)
+    this.user = null;
+    this.profile = null;
+    Storage.clearHistory();
+    Game.seenQuestions = [];
+    Game.currentQuestion = null;
+
+    this._updateUI();
+    if (typeof UI !== 'undefined') {
+      UI.updateStats();
+      UI.showWelcome();
+    }
+  },
+
+  /**
    * Load user profile (handle) from user_profiles
    */
   async _loadProfile() {
@@ -556,5 +595,27 @@ const AuthUI = {
     // Close button
     const closeBtn = document.getElementById('auth-modal-close');
     if (closeBtn) closeBtn.addEventListener('click', () => this.hideModal());
+
+    // Delete account link
+    const deleteLink = document.getElementById('delete-account-link');
+    if (deleteLink) {
+      deleteLink.addEventListener('click', async (e) => {
+        e.preventDefault();
+        if (!Auth.isLoggedIn()) return;
+
+        const confirmed = confirm(
+          'Are you sure you want to delete your account?\n\n' +
+          'This will permanently delete all your data and cannot be undone.'
+        );
+
+        if (confirmed) {
+          try {
+            await Auth.deleteAccount();
+          } catch (err) {
+            alert('Failed to delete account: ' + err.message);
+          }
+        }
+      });
+    }
   }
 };

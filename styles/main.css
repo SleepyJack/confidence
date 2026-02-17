@@ -1166,6 +1166,20 @@ input[type="range"]::-moz-range-thumb:hover {
   color: var(--accent);
 }
 
+.user-separator {
+  color: var(--text-tertiary);
+}
+
+.delete-account-link {
+  color: var(--text-tertiary);
+  text-decoration: none;
+  transition: color 0.2s var(--ease);
+}
+
+.delete-account-link:hover {
+  color: var(--error);
+}
+
 .btn-auth {
   padding: 8px 20px;
   font-size: 0.78rem;
