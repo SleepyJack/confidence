@@ -1,27 +1,41 @@
 /**
  * Stats dashboard — client-side logic
- * Fetches metrics from /api/stats and renders Chart.js bar chart
+ * Fetches metrics from /api/stats and renders Chart.js bar charts
  */
 (function () {
   'use strict';
 
-  let chartInstance = null;
+  var questionsChart = null;
+  var responsesChart = null;
+  var usersChart = null;
 
-  // DOM refs
-  const tileTotal = document.getElementById('tile-total');
-  const tileActive = document.getElementById('tile-active');
-  const tileAvg = document.getElementById('tile-avg-responses');
-  const canvas = document.getElementById('stats-chart-canvas');
-  const rangeButtons = document.querySelectorAll('.range-btn');
+  // DOM refs — Questions
+  var tileTotal = document.getElementById('tile-total');
+  var tileActive = document.getElementById('tile-active');
+  var tileAvg = document.getElementById('tile-avg-responses');
+  var questionsCanvas = document.getElementById('stats-chart-canvas');
+
+  // DOM refs — Responses
+  var tileTotalResponses = document.getElementById('tile-total-responses');
+  var tileAvgScore = document.getElementById('tile-avg-score');
+  var tileAvgConfidence = document.getElementById('tile-avg-confidence');
+  var responsesCanvas = document.getElementById('responses-chart-canvas');
+
+  // DOM refs — Users
+  var tileTotalUsers = document.getElementById('tile-total-users');
+  var usersCanvas = document.getElementById('users-chart-canvas');
+
+  var rangeButtons = document.querySelectorAll('.range-btn');
 
   async function fetchStats(days) {
-    const qs = days > 0 ? `?days=${days}` : '';
-    const res = await fetch(`/api/stats${qs}`);
-    if (!res.ok) throw new Error(`API returned ${res.status}`);
+    var qs = days > 0 ? '?days=' + days : '';
+    var res = await fetch('/api/stats' + qs);
+    if (!res.ok) throw new Error('API returned ' + res.status);
     return res.json();
   }
 
   function populateTiles(data) {
+    // Questions
     tileTotal.textContent = data.totalQuestions.toLocaleString();
     tileTotal.classList.remove('loading');
 
@@ -30,30 +44,53 @@
 
     tileAvg.textContent = data.avgResponsesPerQuestion.toFixed(1);
     tileAvg.classList.remove('loading');
+
+    // Responses
+    tileTotalResponses.textContent = data.totalResponses.toLocaleString();
+    tileTotalResponses.classList.remove('loading');
+
+    tileAvgScore.textContent = data.avgScoreAll.toFixed(1);
+    tileAvgScore.classList.remove('loading');
+
+    tileAvgConfidence.textContent = data.avgConfidenceAll.toFixed(1);
+    tileAvgConfidence.classList.remove('loading');
+
+    // Users
+    tileTotalUsers.textContent = data.totalUsers.toLocaleString();
+    tileTotalUsers.classList.remove('loading');
   }
 
-  function renderChart(timeSeries) {
-    const labels = timeSeries.map(function (d) { return d.date; });
-    const counts = timeSeries.map(function (d) { return d.count; });
+  /**
+   * Generic bar chart renderer.
+   * @param {HTMLCanvasElement} canvas
+   * @param {Chart|null} existing - previous Chart instance to destroy
+   * @param {Array} timeSeries - [{date, count}]
+   * @param {string} label - dataset label
+   * @param {string} colorMain - e.g. 'rgba(75, 160, 226, 0.85)'
+   * @param {string} colorFade - e.g. 'rgba(75, 160, 226, 0.25)'
+   * @param {string} borderHex - e.g. '#4ba0e2'
+   * @returns {Chart}
+   */
+  function renderBarChart(canvas, existing, timeSeries, label, colorMain, colorFade, borderHex) {
+    var labels = timeSeries.map(function (d) { return d.date; });
+    var counts = timeSeries.map(function (d) { return d.count; });
 
-    const ctx = canvas.getContext('2d');
+    var ctx = canvas.getContext('2d');
+    var barGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    barGrad.addColorStop(0, colorMain);
+    barGrad.addColorStop(1, colorFade);
 
-    // Gold accent gradient for bars
-    const barGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    barGrad.addColorStop(0, 'rgba(226, 168, 75, 0.85)');
-    barGrad.addColorStop(1, 'rgba(226, 168, 75, 0.25)');
+    if (existing) existing.destroy();
 
-    if (chartInstance) chartInstance.destroy();
-
-    chartInstance = new Chart(ctx, {
+    return new Chart(ctx, {
       type: 'bar',
       data: {
         labels: labels,
         datasets: [{
-          label: 'Questions',
+          label: label,
           data: counts,
           backgroundColor: barGrad,
-          borderColor: '#e2a84b',
+          borderColor: borderHex,
           borderWidth: 1,
           borderRadius: 3,
           borderSkipped: 'bottom'
@@ -78,7 +115,7 @@
               title: function (items) { return items[0].label; },
               label: function (item) {
                 var n = item.parsed.y;
-                return n + ' question' + (n === 1 ? '' : 's');
+                return n + ' ' + label.toLowerCase() + (n === 1 ? '' : 's');
               }
             }
           }
@@ -108,16 +145,46 @@
     });
   }
 
+  function renderQuestionsChart(timeSeries) {
+    questionsChart = renderBarChart(
+      questionsCanvas, questionsChart, timeSeries,
+      'Question',
+      'rgba(226, 168, 75, 0.85)', 'rgba(226, 168, 75, 0.25)', '#e2a84b'
+    );
+  }
+
+  function renderResponsesChart(timeSeries) {
+    responsesChart = renderBarChart(
+      responsesCanvas, responsesChart, timeSeries,
+      'Response',
+      'rgba(75, 160, 226, 0.85)', 'rgba(75, 160, 226, 0.25)', '#4ba0e2'
+    );
+  }
+
+  function renderUsersChart(timeSeries) {
+    usersChart = renderBarChart(
+      usersCanvas, usersChart, timeSeries,
+      'Registration',
+      'rgba(75, 190, 120, 0.85)', 'rgba(75, 190, 120, 0.25)', '#4bbe78'
+    );
+  }
+
   async function load(days) {
     try {
       var data = await fetchStats(days);
       populateTiles(data);
-      renderChart(data.timeSeries);
+      renderQuestionsChart(data.timeSeries);
+      renderResponsesChart(data.responsesTimeSeries);
+      renderUsersChart(data.usersTimeSeries);
     } catch (err) {
       console.error('Failed to load stats:', err);
       tileTotal.textContent = 'err';
       tileActive.textContent = 'err';
       tileAvg.textContent = 'err';
+      tileTotalResponses.textContent = 'err';
+      tileAvgScore.textContent = 'err';
+      tileAvgConfidence.textContent = 'err';
+      tileTotalUsers.textContent = 'err';
     }
   }
 

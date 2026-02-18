@@ -19,6 +19,17 @@
       margin-bottom: 0;
     }
 
+    /* Section headings */
+    .stats-section-heading {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 400;
+      color: var(--text-primary);
+      margin: 40px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
     /* Summary tiles row */
     .summary-row {
       display: grid;
@@ -26,6 +37,10 @@
       gap: 16px;
       margin-bottom: 24px;
       animation: fadeUp 0.5s var(--ease) 0.1s both;
+    }
+
+    .summary-row.single-tile {
+      grid-template-columns: 1fr;
     }
 
     .stat-tile {
@@ -136,11 +151,13 @@
     <!-- Header -->
     <header class="stats-page-header">
       <div class="header-badge">Stats</div>
-      <h1>Question <em>Metrics</em></h1>
-      <p class="subtitle">Database question generation over time</p>
+      <h1>Dashboard <em>Metrics</em></h1>
+      <p class="subtitle">Questions, responses, and user activity over time</p>
     </header>
 
-    <!-- Summary tiles -->
+    <!-- ── Questions ────────────────────────────────────── -->
+    <h2 class="stats-section-heading">Questions</h2>
+
     <div class="summary-row">
       <div class="card stat-tile">
         <div class="tile-value loading" id="tile-total">&mdash;</div>
@@ -156,7 +173,6 @@
       </div>
     </div>
 
-    <!-- Chart -->
     <div class="card chart-card">
       <div class="chart-header">
         <span class="chart-title">Questions Generated</span>
@@ -169,6 +185,52 @@
       </div>
       <div class="stats-chart-wrap">
         <canvas id="stats-chart-canvas"></canvas>
+      </div>
+    </div>
+
+    <!-- ── Responses ────────────────────────────────────── -->
+    <h2 class="stats-section-heading">Responses</h2>
+
+    <div class="summary-row">
+      <div class="card stat-tile">
+        <div class="tile-value loading" id="tile-total-responses">&mdash;</div>
+        <div class="tile-label">Total Responses</div>
+      </div>
+      <div class="card stat-tile">
+        <div class="tile-value loading" id="tile-avg-score">&mdash;</div>
+        <div class="tile-label">Avg Score</div>
+      </div>
+      <div class="card stat-tile">
+        <div class="tile-value loading" id="tile-avg-confidence">&mdash;</div>
+        <div class="tile-label">Avg Confidence</div>
+      </div>
+    </div>
+
+    <div class="card chart-card">
+      <div class="chart-header">
+        <span class="chart-title">Responses Over Time</span>
+      </div>
+      <div class="stats-chart-wrap">
+        <canvas id="responses-chart-canvas"></canvas>
+      </div>
+    </div>
+
+    <!-- ── Users ────────────────────────────────────────── -->
+    <h2 class="stats-section-heading">Users</h2>
+
+    <div class="summary-row single-tile">
+      <div class="card stat-tile">
+        <div class="tile-value loading" id="tile-total-users">&mdash;</div>
+        <div class="tile-label">Total Users</div>
+      </div>
+    </div>
+
+    <div class="card chart-card">
+      <div class="chart-header">
+        <span class="chart-title">Registrations Over Time</span>
+      </div>
+      <div class="stats-chart-wrap">
+        <canvas id="users-chart-canvas"></canvas>
       </div>
     </div>
   </div>
