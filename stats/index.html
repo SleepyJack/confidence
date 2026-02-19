@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles/main.css">
   <style>
-    /* Stats page layout */
+    /* ── Page header ───────────────────────────────────── */
     .stats-page-header h1 {
       font-size: clamp(1.6rem, 3vw, 2.4rem);
       margin-bottom: 8px;
@@ -19,58 +19,164 @@
       margin-bottom: 0;
     }
 
-    /* Section headings */
-    .stats-section-heading {
-      font-family: var(--font-display);
-      font-size: 1.4rem;
-      font-weight: 400;
-      color: var(--text-primary);
-      margin: 40px 0 16px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
+    /* ── Section colors ────────────────────────────────── */
+    :root {
+      --section-questions: #e2a84b;
+      --section-questions-dim: rgba(226, 168, 75, 0.12);
+      --section-questions-glow: rgba(226, 168, 75, 0.06);
+      --section-responses: #60a5fa;
+      --section-responses-dim: rgba(96, 165, 250, 0.12);
+      --section-responses-glow: rgba(96, 165, 250, 0.06);
+      --section-users: #4ade80;
+      --section-users-dim: rgba(74, 222, 128, 0.12);
+      --section-users-glow: rgba(74, 222, 128, 0.06);
     }
 
-    /* Summary tiles row */
+    /* ── Stats section ─────────────────────────────────── */
+    .stats-section {
+      margin-top: 48px;
+    }
+
+    .stats-section:first-of-type {
+      margin-top: 32px;
+    }
+
+    .stats-section-heading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin: 0 0 20px;
+      padding: 0;
+    }
+
+    .stats-section-heading::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .stats-section-heading::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      margin-left: 8px;
+    }
+
+    /* Section-specific heading colors */
+    .stats-section--questions .stats-section-heading { color: var(--section-questions); }
+    .stats-section--questions .stats-section-heading::before { background: var(--section-questions); box-shadow: 0 0 8px var(--section-questions-dim); }
+    .stats-section--questions .stats-section-heading::after { background: linear-gradient(90deg, rgba(226,168,75,0.25), transparent); }
+
+    .stats-section--responses .stats-section-heading { color: var(--section-responses); }
+    .stats-section--responses .stats-section-heading::before { background: var(--section-responses); box-shadow: 0 0 8px var(--section-responses-dim); }
+    .stats-section--responses .stats-section-heading::after { background: linear-gradient(90deg, rgba(96,165,250,0.25), transparent); }
+
+    .stats-section--users .stats-section-heading { color: var(--section-users); }
+    .stats-section--users .stats-section-heading::before { background: var(--section-users); box-shadow: 0 0 8px var(--section-users-dim); }
+    .stats-section--users .stats-section-heading::after { background: linear-gradient(90deg, rgba(74,222,128,0.25), transparent); }
+
+    /* ── Summary tiles ─────────────────────────────────── */
     .summary-row {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 16px;
-      margin-bottom: 24px;
-      animation: fadeUp 0.5s var(--ease) 0.1s both;
+      margin-bottom: 20px;
     }
 
     .summary-row.single-tile {
       grid-template-columns: 1fr;
+      max-width: 280px;
     }
 
     .stat-tile {
       text-align: center;
-      padding: 24px 16px;
+      padding: 28px 16px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s var(--ease), box-shadow 0.3s var(--ease);
     }
+
+    /* Top accent bar */
+    .stat-tile::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      opacity: 0.6;
+      transition: opacity 0.3s var(--ease);
+    }
+
+    .stat-tile:hover::before {
+      opacity: 1;
+    }
+
+    /* Section-specific tile accents */
+    .stats-section--questions .stat-tile::before { background: var(--section-questions); }
+    .stats-section--questions .stat-tile:hover { border-color: rgba(226,168,75,0.2); box-shadow: 0 4px 24px var(--section-questions-glow); }
+    .stats-section--questions .tile-value { color: var(--section-questions) !important; }
+
+    .stats-section--responses .stat-tile::before { background: var(--section-responses); }
+    .stats-section--responses .stat-tile:hover { border-color: rgba(96,165,250,0.2); box-shadow: 0 4px 24px var(--section-responses-glow); }
+    .stats-section--responses .tile-value { color: var(--section-responses) !important; }
+
+    .stats-section--users .stat-tile::before { background: var(--section-users); }
+    .stats-section--users .stat-tile:hover { border-color: rgba(74,222,128,0.2); box-shadow: 0 4px 24px var(--section-users-glow); }
+    .stats-section--users .tile-value { color: var(--section-users) !important; }
 
     .stat-tile .tile-value {
       font-family: var(--font-mono);
       font-size: 2.2rem;
       font-weight: 700;
-      color: var(--accent);
       line-height: 1;
       letter-spacing: -0.03em;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
+      transition: transform 0.3s var(--ease);
+    }
+
+    .stat-tile:hover .tile-value {
+      transform: scale(1.04);
     }
 
     .stat-tile .tile-label {
       font-family: var(--font-mono);
-      font-size: 0.68rem;
+      font-size: 0.65rem;
       font-weight: 500;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--text-tertiary);
     }
 
-    /* Chart card */
+    /* ── Chart card ────────────────────────────────────── */
     .chart-card {
-      animation: fadeUp 0.5s var(--ease) 0.2s both;
+      position: relative;
+      overflow: hidden;
     }
+
+    /* Subtle top border glow matching section color */
+    .chart-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      opacity: 0.4;
+    }
+
+    .stats-section--questions .chart-card::before { background: linear-gradient(90deg, transparent, var(--section-questions), transparent); }
+    .stats-section--responses .chart-card::before { background: linear-gradient(90deg, transparent, var(--section-responses), transparent); }
+    .stats-section--users .chart-card::before { background: linear-gradient(90deg, transparent, var(--section-users), transparent); }
 
     .chart-header {
       display: flex;
@@ -81,7 +187,7 @@
 
     .chart-title {
       font-family: var(--font-display);
-      font-size: 1.2rem;
+      font-size: 1.15rem;
       font-weight: 400;
       color: var(--text-primary);
     }
@@ -93,7 +199,7 @@
 
     .range-btn {
       font-family: var(--font-mono);
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       font-weight: 500;
       letter-spacing: 0.04em;
       padding: 6px 14px;
@@ -118,17 +224,30 @@
 
     .stats-chart-wrap {
       position: relative;
-      height: 280px;
+      height: 260px;
     }
 
-    /* Loading state for tiles */
+    /* ── Loading & error states ────────────────────────── */
     .tile-value.loading {
-      color: var(--text-tertiary);
+      color: var(--text-tertiary) !important;
     }
 
+    /* ── Staggered entrance animations ─────────────────── */
+    .stats-section--questions .summary-row { animation: fadeUp 0.5s var(--ease) 0.05s both; }
+    .stats-section--questions .chart-card  { animation: fadeUp 0.5s var(--ease) 0.12s both; }
+    .stats-section--responses .summary-row { animation: fadeUp 0.5s var(--ease) 0.19s both; }
+    .stats-section--responses .chart-card  { animation: fadeUp 0.5s var(--ease) 0.26s both; }
+    .stats-section--users .summary-row     { animation: fadeUp 0.5s var(--ease) 0.33s both; }
+    .stats-section--users .chart-card      { animation: fadeUp 0.5s var(--ease) 0.40s both; }
+
+    /* ── Responsive ────────────────────────────────────── */
     @media (max-width: 640px) {
       .summary-row {
         grid-template-columns: 1fr;
+      }
+
+      .summary-row.single-tile {
+        max-width: none;
       }
 
       .chart-header {
@@ -139,6 +258,10 @@
 
       .stat-tile .tile-value {
         font-size: 1.8rem;
+      }
+
+      .stats-section {
+        margin-top: 36px;
       }
     }
   </style>
@@ -156,83 +279,89 @@
     </header>
 
     <!-- ── Questions ────────────────────────────────────── -->
-    <h2 class="stats-section-heading">Questions</h2>
+    <section class="stats-section stats-section--questions">
+      <h2 class="stats-section-heading">Questions</h2>
 
-    <div class="summary-row">
-      <div class="card stat-tile">
-        <div class="tile-value loading" id="tile-total">&mdash;</div>
-        <div class="tile-label">Total Questions</div>
-      </div>
-      <div class="card stat-tile">
-        <div class="tile-value loading" id="tile-active">&mdash;</div>
-        <div class="tile-label">Active Questions</div>
-      </div>
-      <div class="card stat-tile">
-        <div class="tile-value loading" id="tile-avg-responses">&mdash;</div>
-        <div class="tile-label">Avg Responses</div>
-      </div>
-    </div>
-
-    <div class="card chart-card">
-      <div class="chart-header">
-        <span class="chart-title">Questions Generated</span>
-        <div class="range-buttons">
-          <button class="range-btn" data-days="7">7d</button>
-          <button class="range-btn active" data-days="30">30d</button>
-          <button class="range-btn" data-days="90">90d</button>
-          <button class="range-btn" data-days="0">All</button>
+      <div class="summary-row">
+        <div class="card stat-tile">
+          <div class="tile-value loading" id="tile-total">&mdash;</div>
+          <div class="tile-label">Total Questions</div>
+        </div>
+        <div class="card stat-tile">
+          <div class="tile-value loading" id="tile-active">&mdash;</div>
+          <div class="tile-label">Active</div>
+        </div>
+        <div class="card stat-tile">
+          <div class="tile-value loading" id="tile-avg-responses">&mdash;</div>
+          <div class="tile-label">Avg Responses</div>
         </div>
       </div>
-      <div class="stats-chart-wrap">
-        <canvas id="stats-chart-canvas"></canvas>
+
+      <div class="card chart-card">
+        <div class="chart-header">
+          <span class="chart-title">Questions Generated</span>
+          <div class="range-buttons">
+            <button class="range-btn" data-days="7">7d</button>
+            <button class="range-btn active" data-days="30">30d</button>
+            <button class="range-btn" data-days="90">90d</button>
+            <button class="range-btn" data-days="0">All</button>
+          </div>
+        </div>
+        <div class="stats-chart-wrap">
+          <canvas id="stats-chart-canvas"></canvas>
+        </div>
       </div>
-    </div>
+    </section>
 
     <!-- ── Responses ────────────────────────────────────── -->
-    <h2 class="stats-section-heading">Responses</h2>
+    <section class="stats-section stats-section--responses">
+      <h2 class="stats-section-heading">Responses</h2>
 
-    <div class="summary-row">
-      <div class="card stat-tile">
-        <div class="tile-value loading" id="tile-total-responses">&mdash;</div>
-        <div class="tile-label">Total Responses</div>
+      <div class="summary-row">
+        <div class="card stat-tile">
+          <div class="tile-value loading" id="tile-total-responses">&mdash;</div>
+          <div class="tile-label">Total Responses</div>
+        </div>
+        <div class="card stat-tile">
+          <div class="tile-value loading" id="tile-avg-score">&mdash;</div>
+          <div class="tile-label">Avg Score</div>
+        </div>
+        <div class="card stat-tile">
+          <div class="tile-value loading" id="tile-avg-confidence">&mdash;</div>
+          <div class="tile-label">Avg Confidence</div>
+        </div>
       </div>
-      <div class="card stat-tile">
-        <div class="tile-value loading" id="tile-avg-score">&mdash;</div>
-        <div class="tile-label">Avg Score</div>
-      </div>
-      <div class="card stat-tile">
-        <div class="tile-value loading" id="tile-avg-confidence">&mdash;</div>
-        <div class="tile-label">Avg Confidence</div>
-      </div>
-    </div>
 
-    <div class="card chart-card">
-      <div class="chart-header">
-        <span class="chart-title">Responses Over Time</span>
+      <div class="card chart-card">
+        <div class="chart-header">
+          <span class="chart-title">Responses Over Time</span>
+        </div>
+        <div class="stats-chart-wrap">
+          <canvas id="responses-chart-canvas"></canvas>
+        </div>
       </div>
-      <div class="stats-chart-wrap">
-        <canvas id="responses-chart-canvas"></canvas>
-      </div>
-    </div>
+    </section>
 
     <!-- ── Users ────────────────────────────────────────── -->
-    <h2 class="stats-section-heading">Users</h2>
+    <section class="stats-section stats-section--users">
+      <h2 class="stats-section-heading">Users</h2>
 
-    <div class="summary-row single-tile">
-      <div class="card stat-tile">
-        <div class="tile-value loading" id="tile-total-users">&mdash;</div>
-        <div class="tile-label">Total Users</div>
+      <div class="summary-row single-tile">
+        <div class="card stat-tile">
+          <div class="tile-value loading" id="tile-total-users">&mdash;</div>
+          <div class="tile-label">Total Users</div>
+        </div>
       </div>
-    </div>
 
-    <div class="card chart-card">
-      <div class="chart-header">
-        <span class="chart-title">Registrations Over Time</span>
+      <div class="card chart-card">
+        <div class="chart-header">
+          <span class="chart-title">Registrations Over Time</span>
+        </div>
+        <div class="stats-chart-wrap">
+          <canvas id="users-chart-canvas"></canvas>
+        </div>
       </div>
-      <div class="stats-chart-wrap">
-        <canvas id="users-chart-canvas"></canvas>
-      </div>
-    </div>
+    </section>
   </div>
 
   <!-- Version footer -->

@@ -391,14 +391,14 @@ const Auth = {
   },
 
   /**
-   * Save a response to Supabase (called after each answer when logged in)
+   * Save a response via server endpoint (also updates question stats)
    */
   async saveResponse(answerData) {
     if (!this.supabase || !this.user) return false;
 
     try {
-      const { data: { session } } = await this.supabase.auth.getSession();
-      if (!session) return false;
+      const token = await this.getAccessToken();
+      if (!token) return false;
 
       const score = Scoring.normalizeLogScore(
         Math.max(
@@ -410,22 +410,26 @@ const Auth = {
         )
       );
 
-      const { error } = await this.supabase
-        .from('user_responses')
-        .insert({
-          user_id: this.user.id,
-          question_id: answerData.questionId,
-          answer: (answerData.userLow + answerData.userHigh) / 2,
-          user_low: answerData.userLow,
-          user_high: answerData.userHigh,
-          correct_answer: answerData.correctAnswer,
-          is_correct: answerData.isCorrect,
-          score: score,
-          confidence: answerData.confidence
-        });
+      const resp = await fetch('/api/auth/respond', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          questionId: answerData.questionId,
+          userLow: answerData.userLow,
+          userHigh: answerData.userHigh,
+          confidence: answerData.confidence,
+          correctAnswer: answerData.correctAnswer,
+          isCorrect: answerData.isCorrect,
+          score: score
+        })
+      });
 
-      if (error) {
-        console.warn('Failed to save response to Supabase:', error.message);
+      if (!resp.ok) {
+        const err = await resp.json();
+        console.warn('Failed to save response:', err.error);
         return false;
       }
       return true;

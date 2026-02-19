@@ -1,6 +1,6 @@
 # Confidence Calibration Game
 
-A web-based game designed to help users improve their confidence calibration by making numerical estimates with confidence intervals.
+A web-based game to improve your confidence calibration by making numerical estimates with confidence intervals.
 
 ## What is Confidence Calibration?
 
@@ -12,51 +12,47 @@ Confidence calibration measures how well your stated confidence matches reality.
 2. Provide your estimate as a range:
    - **Low bound**: The lowest value you think is possible
    - **High bound**: The highest value you think is possible
-   - **Confidence**: How confident you are that the true answer falls within your range (e.g., 80%)
-3. The game reveals the correct answer
-4. After multiple questions, you'll see your calibration score: how well your confidence matches your actual accuracy
-
-## Example
-
-**Question**: "What is the population of Russia?"
-
-**Your answer**:
-- Low bound: 120,000,000
-- High bound: 180,000,000
-- Confidence: 90%
-
-**Result**: The actual population is ~144,000,000 - you were correct! If you're well-calibrated, you should be correct on 90% of questions where you claim 90% confidence.
+   - **Confidence**: How confident you are that the true answer falls within your range (50–99%)
+3. The game reveals the correct answer and shows a bell curve of your estimate
+4. After multiple questions, your scores trend over time on two charts
 
 ## Scoring
 
-The game tracks your performance across all questions and calculates:
-- **Calibration by confidence level**: For each confidence level you use (50%, 80%, 90%, etc.), what percentage of the time were you actually correct?
-- **Overall calibration score**: How close your stated confidence is to your actual accuracy
-- **Overconfidence/underconfidence indicator**: Are you too sure of yourself, or too cautious?
+The game tracks two metrics. See [docs/scoring-system.md](docs/scoring-system.md) for full details.
+
+- **Precision Score** (0–100%): Rewards both accuracy and narrow ranges using logarithmic scoring — a proper scoring rule that can't be gamed by hedging.
+- **Over/Under Confidence Score**: Measures systematic confidence bias. Averages to 0 for a perfectly calibrated player. Negative = overconfident, positive = underconfident.
+
+Both metrics use Exponential Moving Average (EMA) smoothing so trends are clear and recent improvement is reflected quickly.
 
 ## Tech Stack
 
 - **Frontend**: HTML, CSS, vanilla JavaScript
 - **Backend**: Vercel serverless functions (`api/`)
 - **Database**: Supabase (Postgres) — schema in `sql/schema.sql`
-- **Question generation**: Google Gemini API
-- **Hosting**: Vercel (deploys from `live` branch)
+- **Question generation**: Google Gemini API with web search grounding
+- **Hosting**: Vercel (deploys from `live` branch via GitHub Actions)
+- **Auth**: Supabase email/password auth with per-user response history
 
 ## Getting Started
 
 1. Clone the repo and run `npm install`
-2. Set up [Supabase](docs/supabase-setup.md) (database) and [Vercel](docs/vercel-setup.md) (hosting)
-3. Run locally with `vercel dev`
-4. Run tests with `npm test` (unit) or `npm run test:integration` (database)
+2. Set up [Supabase](docs/supabase-setup.md) (database + auth) and [Vercel](docs/vercel-setup.md) (hosting)
+3. Set up [Gemini](docs/gemini-setup.md) (AI question generation)
+4. Run locally with `vercel dev`
+5. Run tests with `npm test` (unit) or `npm run test:integration` (database)
 
-## Future Enhancements
+## Deployment
 
-- User accounts and persistent score history
-- AI-generated questions for unlimited variety
-- Multiplayer mode or leaderboards
-- Different question categories and difficulty levels
-- Calibration curve visualization
-- Question packs from different domains (science, history, geography, etc.)
+Setup guides:
+
+- [Vercel setup](docs/vercel-setup.md) — hosting, env vars, releases, local dev, troubleshooting
+- [Supabase setup](docs/supabase-setup.md) — database schema, test schema, integration tests
+- [Gemini setup](docs/gemini-setup.md) — AI question generation API key and config
+
+## Future Directions
+
+See [PLAN.md](PLAN.md) for outstanding work and expansion ideas.
 
 ## Why This Matters
 

@@ -50,19 +50,19 @@ The next deployment will automatically use this environment variable.
 
 ## 5. Enable Gemini Question Source
 
-Edit `config.json` in the project root:
+Edit `config.json` in the project root. The `questionSources` array controls the order sources are tried:
 
 ```json
 {
-  "version": "0.1.12",
-  "questionSource": "gemini",
+  "version": "1.0.3",
+  "questionSources": ["db", "gemini", "json"],
   "gemini": {
     "model": "gemini-2.5-flash"
   }
 }
 ```
 
-Change `questionSource` from `"json"` to `"gemini"` to enable AI-generated questions.
+The default order is `["db", "gemini", "json"]`: serve from the DB pool first, fall back to live Gemini generation, then fall back to the bundled JSON questions. For local dev without Supabase, use `["gemini", "json"]`.
 
 ## 6. Test the Setup
 
@@ -128,7 +128,7 @@ For a calibration game generating ~50-100 questions/day, you should stay well wi
 You can change the model in `config.json`. Available options:
 - `gemini-2.5-flash` (recommended) - Fast, cheap, good quality
 - `gemini-2.5-pro` - Higher quality, slower, more expensive
-- `gemini-2.0-flash` - Previous generation, being deprecated
+- `gemini-2.0-flash` - Previous generation
 
 The model can also be overridden via environment variable:
 ```bash

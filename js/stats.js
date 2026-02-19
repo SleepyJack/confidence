@@ -27,6 +27,13 @@
 
   var rangeButtons = document.querySelectorAll('.range-btn');
 
+  // Section colour palettes (match CSS variables)
+  var colors = {
+    questions:  { main: 'rgba(226, 168, 75, 0.80)', fade: 'rgba(226, 168, 75, 0.18)', border: '#e2a84b' },
+    responses:  { main: 'rgba(96, 165, 250, 0.80)', fade: 'rgba(96, 165, 250, 0.18)', border: '#60a5fa' },
+    users:      { main: 'rgba(74, 222, 128, 0.80)', fade: 'rgba(74, 222, 128, 0.18)', border: '#4ade80' }
+  };
+
   async function fetchStats(days) {
     var qs = days > 0 ? '?days=' + days : '';
     var res = await fetch('/api/stats' + qs);
@@ -65,20 +72,18 @@
    * @param {HTMLCanvasElement} canvas
    * @param {Chart|null} existing - previous Chart instance to destroy
    * @param {Array} timeSeries - [{date, count}]
-   * @param {string} label - dataset label
-   * @param {string} colorMain - e.g. 'rgba(75, 160, 226, 0.85)'
-   * @param {string} colorFade - e.g. 'rgba(75, 160, 226, 0.25)'
-   * @param {string} borderHex - e.g. '#4ba0e2'
+   * @param {string} label - dataset label (singular)
+   * @param {Object} palette - { main, fade, border }
    * @returns {Chart}
    */
-  function renderBarChart(canvas, existing, timeSeries, label, colorMain, colorFade, borderHex) {
+  function renderBarChart(canvas, existing, timeSeries, label, palette) {
     var labels = timeSeries.map(function (d) { return d.date; });
     var counts = timeSeries.map(function (d) { return d.count; });
 
     var ctx = canvas.getContext('2d');
     var barGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    barGrad.addColorStop(0, colorMain);
-    barGrad.addColorStop(1, colorFade);
+    barGrad.addColorStop(0, palette.main);
+    barGrad.addColorStop(1, palette.fade);
 
     if (existing) existing.destroy();
 
@@ -90,7 +95,7 @@
           label: label,
           data: counts,
           backgroundColor: barGrad,
-          borderColor: borderHex,
+          borderColor: palette.border,
           borderWidth: 1,
           borderRadius: 3,
           borderSkipped: 'bottom'
@@ -147,25 +152,19 @@
 
   function renderQuestionsChart(timeSeries) {
     questionsChart = renderBarChart(
-      questionsCanvas, questionsChart, timeSeries,
-      'Question',
-      'rgba(226, 168, 75, 0.85)', 'rgba(226, 168, 75, 0.25)', '#e2a84b'
+      questionsCanvas, questionsChart, timeSeries, 'Question', colors.questions
     );
   }
 
   function renderResponsesChart(timeSeries) {
     responsesChart = renderBarChart(
-      responsesCanvas, responsesChart, timeSeries,
-      'Response',
-      'rgba(75, 160, 226, 0.85)', 'rgba(75, 160, 226, 0.25)', '#4ba0e2'
+      responsesCanvas, responsesChart, timeSeries, 'Response', colors.responses
     );
   }
 
   function renderUsersChart(timeSeries) {
     usersChart = renderBarChart(
-      usersCanvas, usersChart, timeSeries,
-      'Registration',
-      'rgba(75, 190, 120, 0.85)', 'rgba(75, 190, 120, 0.25)', '#4bbe78'
+      usersCanvas, usersChart, timeSeries, 'Registration', colors.users
     );
   }
 

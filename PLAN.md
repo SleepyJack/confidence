@@ -1,158 +1,53 @@
-# Confidence Calibration Game — Plan
+# Confidence Calibration Game — Expansion Ideas
 
-## Project Overview
-
-A confidence calibration game where users estimate numerical values with confidence intervals. Tracks calibration over time via two metrics: a **Precision Score** (logarithmic scoring rewarding accuracy + narrow ranges) and an **Over/Under Confidence Score** (measures systematic confidence bias). See `docs/scoring-system.md` for full scoring documentation.
+Outstanding work and future directions. For a description of what's built, see README.md.
 
 ---
 
-## MVP — Complete ✓
+## Phase 2b: AI Question Production Hardening
 
-All of the following has been implemented and is live:
-
-- Single-page vanilla JS app, modular architecture (`game.js`, `scoring.js`, `ui.js`, `chart.js`, `distribution.js`, `storage.js`)
-- 45 curated questions in `data/questions.json`
-- Range input (low/high) + confidence slider (50–99%)
-- Immediate feedback with bell curve distribution visualization
-- Two metrics: Precision Score (log scoring + EMA) and Over/Under Confidence (EMA)
-- Both charts show raw scatter points + smoothed EMA line
-- localStorage persistence
-- Chart.js for time-series, custom canvas for distribution
-- Dark theme with JetBrains Mono
-
-### Decisions Made During MVP
-
-| Item | Decision |
-|------|----------|
-| Scoring | Logarithmic scoring with normal distribution (proper scoring rule) |
-| Averaging | EMA (α=0.3) replaces simple mean — rewards improvement, reduces noise |
-| Confidence range | 50–99% — below 50% is illogical ("my range is probably wrong") |
-| Distribution model | Normal over uniform — more intuitive, prettier, rewards precision |
-| Calibration Bias metric | Dropped — replaced by Over/Under Confidence Score |
-| Chart library | Chart.js for time-series, custom canvas for distribution viz |
-| Per-question score | Shown in feedback alongside distribution |
+- Batch-generate questions on a cron schedule rather than per-request
+- Serve from a pre-built pool — replenish when it runs low
+- Cache generated questions (Vercel KV or in-memory) to avoid cold generation latency
 
 ---
 
-## Phase 1: API Seam — Complete ✓
+## Phase 2c: AI Question Quality & Variety
 
-The `/api/next-question` pattern is wired up. The frontend calls one endpoint; the serverless function reads from `questions.json`. Behaviour is identical to before, but the seam is in place — swapping in AI generation later is a single-file change on the server side.
+- Category-aware generation: enforce diversity, prevent topic drift
+- Duplicate prevention via two-phase generation:
 
-- `api/next-question.js` — Vercel serverless function. Accepts `?seen=id1,id2,...` to exclude already-seen questions. Returns one question + a `poolReset` flag when the pool is exhausted.
-- `js/game.js` — `getNextQuestion()` is now async, calls the API. Seen-tracking stays client-side (sent to the server as a query param).
-- Hosting must be Vercel (or equivalent). GitHub Pages won't serve API routes. See `DEPLOY.md`.
+  1. **Summary only** — Ask the AI for a short datum summary (max 10 words), e.g. "height of Mount Everest". Cheap.
+  2. **Similarity check** — Compare against existing summaries in the DB. Reject near-matches and request another.
+  3. **Full question** — Only when the summary is confirmed unique, generate the full question + answer + metadata.
 
----
+  The `summary` field is stored and indexed on each question. Recommended algorithm: PostgreSQL `pg_trgm` (`similarity(a, b) > 0.4`). Graduate to embeddings if needed.
 
-## Phase 2: AI Question Generation
+  ```sql
+  SELECT id, summary, similarity(summary, 'height of Mount Everest') AS sim
+  FROM questions
+  WHERE similarity(summary, 'height of Mount Everest') > 0.4
+  ORDER BY sim DESC;
+  ```
 
-Generate questions dynamically using an AI model with web search grounding.
-
-### 2a: Core Integration — Complete ✓
-- Gemini integration with Google Search grounding for fact verification
-- Config-driven question source routing (`config.json`)
-- Question schema: `id`, `question`, `answer`, `unit`, `category`, `sourceName`, `sourceUrl`, `creator`
-- Creator field tracks origin (e.g., `claude`, `gemini-2.5-flash`)
-- **Questions database**: Supabase PostgreSQL backend (`api/lib/supabase.js`, `api/questions/db-source.js`)
-  - AI-generated questions persisted to DB on creation (non-blocking)
-  - DB serves as fallback source (replaces json-source in the default config chain)
-  - Schema includes `pg_trgm` index on `summary` column for future duplicate detection
-  - UUID primary keys (replacing slug-based IDs)
-  - json-source remains available — add `"json"` to config for local dev without Supabase
-
-### 2b: Production Hardening
-- Batch-generate questions on first request or cron schedule
-- Cache generated questions (Vercel KV or in-memory)
-- Serve from pool — don't generate per-request (slow + expensive)
-- Replenish pool when it runs low
-
-### 2c: Quality & Variety
-- Mix static seed questions with AI-generated ones
-- Category-aware generation (enforce diversity, prevent drift)
-- Validation strategy for generated questions (see design notes below)
-
-### AI Question Generation — Design Notes
-
-**What makes a good estimation question?**
-- Single, verifiable numerical answer
-- Interesting or surprising answer
-- Covers a range of magnitudes and domains
-- Not trivially Googleable mid-game
-
-**Validation is the hard part.** If the model generates a question with an answer, how do we know it's right? Options (roughly in order of preference):
-1. Use web search grounding to cite sources
-2. Ask the model twice independently, flag disagreements
-3. Stick to well-known factual domains where the model is reliable
-4. Human review queue for flagged questions
-5. Trust the AI and rely on user reporting to catch errors
-
-**Duplicate prevention — two-phase generation:**
-
-Rather than generating full questions and then checking for duplicates (wasteful), use a lightweight two-phase approach:
-
-1. **Phase 1: Summary only** — Ask the AI for a minimal "summary" of the datum (max 10 words), e.g., "height of Mount Everest", "number of books in the Bible", "population of Tokyo". This is cheap (few tokens).
-
-2. **Similarity check** — Compare the summary against existing summaries in the DB. If a match or near-match is found, reject and request another summary. Repeat until unique.
-
-3. **Phase 2: Full question** — Only when the summary is confirmed unique, ask for the complete question + answer + metadata JSON.
-
-**Schema addition:** Each question gets a `summary` field (stored, indexed) containing the canonical short description of what's being asked.
-
-**Similarity algorithm options** (roughly in order of simplicity):
-
-| Algorithm | Pros | Cons |
-|-----------|------|------|
-| **Normalized Jaccard** | Simple, no dependencies, works on word sets | Misses word order, synonyms |
-| **Trigram similarity (pg_trgm)** | Built into PostgreSQL, battle-tested, fast with GIN index | Requires Supabase/Postgres |
-| **Levenshtein distance** | Good for typos, built into Postgres | Poor for semantic similarity |
-| **Embedding cosine similarity** | Best semantic matching | Requires embedding model, more complex |
-
-**Recommended approach:** Start with PostgreSQL's `pg_trgm` extension (available in Supabase). Use `similarity(a, b) > 0.4` or `word_similarity()` for fuzzy matching. It's well-tested, efficient with indexes, and handles variations like "Mt. Everest" vs "Mount Everest" reasonably well. Graduate to embeddings later if needed.
-
-```sql
--- Example: find similar summaries
-SELECT id, summary, similarity(summary, 'height of Mount Everest') AS sim
-FROM questions
-WHERE similarity(summary, 'height of Mount Everest') > 0.4
-ORDER BY sim DESC;
-```
-
-**Cost control:**
-- Batch generation (20 questions per API call, not 1)
-- Generated questions are reused across all users
-- Cache aggressively, only regenerate when pool is low
+- Validation strategy options (in order of preference):
+  1. Web search grounding to cite sources
+  2. Ask the model twice independently, flag disagreements
+  3. Stick to well-known factual domains
+  4. Human review queue for flagged questions
+  5. Trust the AI and rely on user reporting to catch errors
 
 ---
 
-## Phase 3: User Persistence & Auth
+## Phase 3b: Social Auth & Cloud-Only History
 
-Move user data out of localStorage into a proper backend.
-
-### 3a: Email/Password Auth — Complete ✓
-
-- **Database tables**: `user_profiles` (handle) + `user_responses` (answer history) with RLS policies
-- **Browser-side Supabase client**: loaded via CDN, initialized from `/api/auth/config`
-- **Auth module** (`js/auth.js`): signup, login, logout, session restore via `onAuthStateChange`
-- **Auth UI**: login/signup modal with tabbed forms, header shows handle + logout button
-- **API endpoints**:
-  - `POST /api/auth/signup` — creates user_profiles row with handle after Supabase Auth signup
-  - `POST /api/auth/migrate` — bulk-inserts localStorage history into user_responses on first login
-  - `GET /api/auth/config` — returns public Supabase URL + anon key for browser client
-- **Dual-write**: answers saved to both localStorage (anonymous fallback) and Supabase (when logged in)
-- **localStorage migration**: on first login, existing history is sent to `/api/auth/migrate`, then cleared
-- **Environment variable**: requires `SUPABASE_ANON_KEY` in addition to existing `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
-
-### 3b: Future — Social Auth, Cloud-Only History
-
-- Social login (OAuth providers) — skipped for now
+- Social login (OAuth providers)
 - Server-side metric calculation from Supabase history
 - Full cloud-only mode (drop localStorage for logged-in users)
 
 ---
 
 ## Phase 4: Multi-User Platform
-
-Further out. Key ideas preserved below.
 
 ### Question Lifecycle
 
@@ -163,48 +58,35 @@ AI generates → "trial" status → served to users → metrics collected
     → user reports increment a counter; auto-retire after threshold
 ```
 
-### Question DB Schema (target)
+### Target DB Schema
 
+**Questions** (additions to current schema):
 ```
-id, question, answer, unit, category, difficulty,
-source, createdAt, lastVerified, generationModel,
-timesShown, avgScore, reportCount, status, expiresAt
+difficulty, timesShown, avgScore, reportCount, status, expiresAt, lastVerified
 ```
 
-### Responses DB Schema (target)
-
+**Responses** (additions to current schema):
 ```
-id, userId, questionId,
-userLow, userHigh, confidence, correctAnswer, isCorrect,
-logScore, precisionScore, confidenceBiasScore,
-answeredAt, responseTimeMs
+responseTimeMs, logScore (computed server-side)
 ```
 
 ### Periodic Services
 
-- Question pool health check (replenish if low)
+- Question pool health check (replenish when low)
 - Time-sensitive question expiry review
 - Quality metrics recalculation
-- These can run as Vercel Cron Jobs or a lightweight Railway worker
+- Vercel Cron Jobs or lightweight Railway worker
 
 ---
 
-## Parallel Track: Analytics Dashboard
+## Analytics Dashboard
 
-A separate frontend for operational visibility. Can begin alongside Phase 2 and evolve with later phases.
+Partially implemented at `/stats` (questions, users, responses counts). Outstanding:
 
-### Metrics to Track
-- Total questions generated (by source/model)
-- Total questions answered (by user, over time)
-- Usage rates and trends (daily/weekly active users)
 - Question quality signals (avg score, report rate, skip rate)
-- Popular categories and difficulty distribution
-
-### Implementation Notes
-- Requires backend storage (Phase 3+) for meaningful data
-- Could start with simple JSON logs, graduate to proper analytics
-- Separate route (`/admin` or `/dashboard`) with basic auth
-- Lightweight charting (Chart.js reuse or simple tables)
+- Category and difficulty distribution
+- Question pool health and replenishment visibility
+- Daily/weekly active user trends
 
 ---
 
@@ -214,15 +96,3 @@ A separate frontend for operational visibility. Can begin alongside Phase 2 and 
 2. **Question difficulty?** Adaptive difficulty, or random mix? Could track per-category difficulty from response data.
 3. **Monetization?** Not a priority now — freemium, ads, or "pay for unlimited questions"?
 4. **Multi-language?** Punt for now, but Supabase + serverless makes i18n relatively straightforward later.
-
----
-
-## Technical Risks & Mitigations
-
-| Risk | Mitigation |
-|------|-----------|
-| AI generates wrong answers | Web search grounding + user reporting + human review queue |
-| Question pool runs dry | Batch generation triggered when pool < threshold |
-| localStorage data lost | Accept for now; cloud sync in Phase 3 handles long-term |
-| Vercel cold starts slow | Serverless functions warm up fast; cache questions in memory |
-| Cost of AI generation | Batch generation + aggressive caching + reuse across users |
