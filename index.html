@@ -285,6 +285,17 @@
         <button type="button" id="reset-done-btn" class="btn btn-primary btn-large">Got it</button>
       </div>
 
+      <!-- Set New Password Form (shown after clicking password reset link) -->
+      <form id="set-password-form" class="auth-form" style="display:none;">
+        <div class="auth-error"></div>
+        <p class="reset-instructions">Enter your new password.</p>
+        <div class="input-group">
+          <label for="new-password">New Password</label>
+          <input type="password" name="password" id="new-password" placeholder="Min 6 characters" autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-large">Set Password</button>
+      </form>
+
       <!-- Signup Form -->
       <form id="signup-form" class="auth-form" style="display:none;">
         <div class="auth-error"></div>

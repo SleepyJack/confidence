@@ -45,6 +45,35 @@ To enable it:
 2. Go to **Authentication → Email** in Supabase and ensure **Enable email confirmations** is on
 3. Ensure your Site URL and Redirect URLs are configured (see above) — the confirmation link will redirect there
 
+### Custom SMTP (Resend)
+
+Supabase's built-in email service is rate-limited to 3 emails/hour and has poor deliverability. For production, use a custom SMTP provider. [Resend](https://resend.com) is the easiest option — free tier covers 3,000 emails/month.
+
+**1. Set up Resend**
+
+1. Create a free account at [resend.com](https://resend.com)
+2. Go to **Domains** and add your domain (e.g. `yourdomain.com`)
+3. Add the DNS records Resend provides (DKIM, SPF, DMARC) — your DNS provider will have a TXT/CNAME records section
+4. Wait for verification (usually a few minutes)
+5. Go to **API Keys** → **Create API Key** → copy it
+
+**2. Configure Supabase**
+
+Go to **Project Settings → Auth → SMTP Settings** and enable **Custom SMTP**:
+
+| Field | Value |
+|---|---|
+| Host | `smtp.resend.com` |
+| Port | `465` |
+| Username | `resend` |
+| Password | Your Resend API key |
+| Sender email | `noreply@yourdomain.com` (must match your verified domain) |
+| Sender name | Whatever you want shown in the From field |
+
+Save and send a test email to confirm it's working.
+
+> **Note:** If you haven't verified a domain yet, Resend allows sending from `onboarding@resend.dev` for testing, but this won't work for production.
+
 ### Email Templates
 
 You can customise the confirmation and password reset emails at **Authentication → Email Templates**. Available template variables include `{{ .ConfirmationURL }}`, `{{ .Email }}`, and `{{ .SiteURL }}`.

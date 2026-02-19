@@ -45,7 +45,12 @@ const Auth = {
         this.user = session?.user || null;
 
         // Handle email confirmation: user just confirmed and logged in
-        if (this.user && wasLoggedOut && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
+        if (event === 'PASSWORD_RECOVERY') {
+          AuthUI.showPasswordUpdateForm();
+          return;
+        }
+
+        if (this.user && wasLoggedOut && (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION')) {
           await this._completeSignup();
           await this._hydrateLocalStorage();
           Game.seenQuestions = Storage.getSeenQuestions();
@@ -540,6 +545,12 @@ const Auth = {
     if (error) throw error;
   },
 
+  async updatePassword(newPassword) {
+    if (!this.supabase) throw new Error('Auth not available');
+    const { error } = await this.supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+  },
+
   /**
    * Update UI based on auth state
    */
@@ -629,10 +640,13 @@ const AuthUI = {
     const resetMsg = document.getElementById('reset-confirmation-message');
     const tabs = document.querySelector('.auth-tabs');
 
+    const setPasswordForm = document.getElementById('set-password-form');
+
     if (confirmationMsg) confirmationMsg.style.display = 'none';
     if (signupForm) signupForm.style.display = 'none';
     if (resetForm) resetForm.style.display = 'none';
     if (resetMsg) resetMsg.style.display = 'none';
+    if (setPasswordForm) setPasswordForm.style.display = 'none';
     if (tabs) tabs.style.display = 'flex';
 
     // Reset to login tab
@@ -824,7 +838,7 @@ const AuthUI = {
     // Confirmation done button (email verification flow)
     const confirmationDoneBtn = document.getElementById('confirmation-done-btn');
     if (confirmationDoneBtn) {
-      confirmationDoneBtn.addEventListener('click', () => this.hideModal());
+      confirmationDoneBtn.addEventListener('click', () => this._dismissModal());
     }
 
     // Password reset flow
@@ -854,8 +868,67 @@ const AuthUI = {
       resetDoneBtn.addEventListener('click', () => this.hideModal());
     }
 
+    const setPasswordForm = document.getElementById('set-password-form');
+    if (setPasswordForm) {
+      setPasswordForm.addEventListener('submit', (e) => this.handlePasswordUpdate(e));
+    }
+
     // --- User menu dropdown ---
     this._initUserMenu();
+  },
+
+  /**
+   * Show the set-new-password form — triggered by PASSWORD_RECOVERY event
+   */
+  showPasswordUpdateForm() {
+    const ids = ['login-form', 'signup-form', 'reset-password-form',
+                 'reset-confirmation-message', 'confirmation-message'];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    const tabs = document.querySelector('.auth-tabs');
+    if (tabs) tabs.style.display = 'none';
+
+    const setPasswordForm = document.getElementById('set-password-form');
+    if (setPasswordForm) setPasswordForm.style.display = '';
+
+    this.showModal();
+    setTimeout(() => {
+      const input = document.getElementById('new-password');
+      if (input) input.focus();
+    }, 100);
+  },
+
+  /**
+   * Handle set-new-password form submit
+   */
+  async handlePasswordUpdate(e) {
+    e.preventDefault();
+    const form = e.target;
+    const password = form.querySelector('[name="password"]').value;
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    if (!password || password.length < 6) {
+      this.showError('set-password-form', 'Password must be at least 6 characters');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+
+    try {
+      await Auth.updatePassword(password);
+      this._dismissModal();
+      if (typeof UI !== 'undefined' && !Game.currentQuestion) {
+        UI.handleStart();
+      }
+    } catch (err) {
+      this.showError('set-password-form', err.message || 'Failed to update password');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Set Password';
+    }
   },
 
   /**
