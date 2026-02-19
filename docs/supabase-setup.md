@@ -17,6 +17,38 @@ Set these in your Vercel project settings for production, and in your shell (or 
 1. Go to [supabase.com](https://supabase.com) and create a free project
 2. Copy the **Project URL**, **anon key**, and **service_role key** from Settings → API
 
+## Auth Configuration
+
+### URL Configuration
+
+Go to **Authentication → URL Configuration**:
+
+- **Site URL** — set to your primary production URL (custom domain if you have one, otherwise the Vercel URL). This is where Supabase redirects users after they click a confirmation link.
+- **Redirect URLs** — add every other URL the app runs at. Supabase will refuse to redirect to anything not on this list.
+
+Typical setup:
+
+| URL | Where to add it |
+|---|---|
+| `https://yourcustomdomain.com` | Site URL |
+| `https://your-project.vercel.app` | Redirect URLs |
+| `http://localhost:3000` | Redirect URLs |
+
+If you don't have a custom domain yet, set the Vercel URL as the Site URL and add `localhost` to Redirect URLs.
+
+### Email Confirmation
+
+Email confirmation is controlled by `auth.emailConfirmation` in `config.json`. Set it to `true` to require users to verify their email before logging in, or `false` to auto-confirm (useful during development).
+
+To enable it:
+1. Set `"emailConfirmation": true` in `config.json`
+2. Go to **Authentication → Email** in Supabase and ensure **Enable email confirmations** is on
+3. Ensure your Site URL and Redirect URLs are configured (see above) — the confirmation link will redirect there
+
+### Email Templates
+
+You can customise the confirmation and password reset emails at **Authentication → Email Templates**. Available template variables include `{{ .ConfirmationURL }}`, `{{ .Email }}`, and `{{ .SiteURL }}`.
+
 ## Production Schema
 
 1. Open your Supabase project → **SQL Editor**
