@@ -3,7 +3,7 @@
  * Serves questions from the Supabase questions table
  */
 
-const { getClient } = require('../lib/supabase');
+const { getClient } = require('../_lib/supabase');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

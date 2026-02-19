@@ -12,7 +12,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { getClient: getSupabase } = require('../lib/supabase');
+const { getClient: getSupabase } = require('../_lib/supabase');
 
 // Load config
 let config = null;

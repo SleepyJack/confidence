@@ -19,9 +19,9 @@ function getConfig() {
 
 // Question source modules (lazy loaded)
 const sources = {
-  json: () => require('./questions/json-source'),
-  gemini: () => require('./questions/gemini-source'),
-  db: () => require('./questions/db-source')
+  json: () => require('./_questions/json-source'),
+  gemini: () => require('./_questions/gemini-source'),
+  db: () => require('./_questions/db-source')
 };
 
 module.exports = async function handler(req, res) {

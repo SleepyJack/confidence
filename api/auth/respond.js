@@ -6,8 +6,8 @@
  * Body: { questionId, userLow, userHigh, confidence, correctAnswer, isCorrect, score }
  */
 
-const { getClient } = require('../lib/supabase');
-const { updateQuestionStats } = require('../lib/update-question-stats');
+const { getClient } = require('../_lib/supabase');
+const { updateQuestionStats } = require('../_lib/update-question-stats');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {

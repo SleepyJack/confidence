@@ -7,7 +7,7 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
-const { updateQuestionStatsBatch } = require('../lib/update-question-stats');
+const { updateQuestionStatsBatch } = require('../_lib/update-question-stats');
 
 // Scoring constants (must match client-side scoring.js)
 const LOG_SCORE_FLOOR = -8;

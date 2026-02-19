@@ -3,7 +3,7 @@
  * GET /api/stats?days=30
  */
 
-const { getClient } = require('./lib/supabase');
+const { getClient } = require('./_lib/supabase');
 
 /**
  * Fill date gaps in a time series with zero-count entries.
