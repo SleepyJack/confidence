@@ -1,5 +1,5 @@
 {
-  "version": "1.0.6",
+  "version": "1.0.7",
   "questionSources": ["db", "gemini", "json"],
   "targetActiveQuestions": 100,
   "gemini": {
