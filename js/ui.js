@@ -59,8 +59,7 @@ const UI = {
       startBtn: document.getElementById('start-btn'),
       welcomeAuthBtn: document.getElementById('welcome-auth-btn'),
       continueBtn: document.getElementById('continue-btn'),
-      welcomeLogoutBtn: document.getElementById('welcome-logout-btn'),
-      resetBtn: document.getElementById('reset-btn')
+      welcomeLogoutBtn: document.getElementById('welcome-logout-btn')
     };
 
     this.attachEventListeners();
@@ -122,9 +121,6 @@ const UI = {
         this.showWelcome();
       });
     }
-
-    // Reset button
-    this.elements.resetBtn.addEventListener('click', () => this.handleReset());
 
     // Retry button
     this.elements.retryBtn.addEventListener('click', () => this.loadNewQuestion());
@@ -450,14 +446,4 @@ const UI = {
     }
   },
 
-  /**
-   * Handle game reset
-   */
-  handleReset() {
-    if (confirm('This will clear all your progress. Are you sure?')) {
-      Game.reset();
-      this.updateStats();
-      this.showWelcome();
-    }
-  }
 };

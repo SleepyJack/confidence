@@ -59,7 +59,12 @@ const Auth = {
           }
         }
 
-        this._updateUI();
+        // During init, skip _updateUI() when auth state hasn't changed —
+        // _finishInit() will call it once the profile is fully loaded.
+        // After init (this._ready), always update.
+        if (wasLoggedOut || this._ready) {
+          this._updateUI();
+        }
       });
 
       // Check current session
@@ -224,8 +229,10 @@ const Auth = {
         await this._migrateLocalData(token);
       } catch (err) {
         console.warn('Failed to complete signup:', err.message);
-        // Handle will need to be set manually
         localStorage.removeItem('pending_handle');
+        // Profile may have been created by a concurrent call (race between
+        // onAuthStateChange and getSession paths) — load it from the DB.
+        await this._loadProfile();
       }
     }
   },
@@ -893,7 +900,10 @@ const AuthUI = {
     const setPasswordForm = document.getElementById('set-password-form');
     if (setPasswordForm) setPasswordForm.style.display = '';
 
-    this.showModal();
+    // Activate the modal directly — don't call showModal() because that calls
+    // switchMode('login') which would re-show the login form we just hid.
+    const modal = document.getElementById('auth-modal');
+    if (modal) modal.classList.add('active');
     setTimeout(() => {
       const input = document.getElementById('new-password');
       if (input) input.focus();
