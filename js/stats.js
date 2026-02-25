@@ -160,10 +160,109 @@
     );
   }
 
-  function renderResponsesChart(timeSeries) {
-    responsesChart = renderBarChart(
-      responsesCanvas, responsesChart, timeSeries, 'Response', colors.responses
-    );
+  /**
+   * Stacked bar chart for user vs guest breakdown (All mode).
+   */
+  function renderStackedResponsesChart(userSeries, guestSeries) {
+    var labels = userSeries.map(function (d) { return d.date; });
+    var userData = userSeries.map(function (d) { return d.count; });
+    var guestData = guestSeries.map(function (d) { return d.count; });
+
+    if (responsesChart) responsesChart.destroy();
+
+    var ctx = responsesCanvas.getContext('2d');
+    responsesChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Users',
+            data: userData,
+            backgroundColor: 'rgba(96, 165, 250, 0.80)',
+            borderColor: '#60a5fa',
+            borderWidth: 1,
+            borderRadius: 3,
+            borderSkipped: 'bottom'
+          },
+          {
+            label: 'Guests',
+            data: guestData,
+            backgroundColor: 'rgba(147, 197, 253, 0.80)',
+            borderColor: '#93c5fd',
+            borderWidth: 1,
+            borderRadius: 3,
+            borderSkipped: 'bottom'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              color: '#9c9a97',
+              font: { family: 'JetBrains Mono, monospace', size: 10 },
+              boxWidth: 12,
+              padding: 12
+            }
+          },
+          tooltip: {
+            backgroundColor: '#1e2028',
+            titleColor: '#e8e6e3',
+            bodyColor: '#e8e6e3',
+            borderColor: 'rgba(255,255,255,0.08)',
+            borderWidth: 1,
+            padding: 10,
+            titleFont: { family: 'JetBrains Mono, monospace', size: 11 },
+            bodyFont: { family: 'JetBrains Mono, monospace', size: 11 },
+            callbacks: {
+              title: function (items) { return items[0].label; },
+              afterBody: function (items) {
+                var total = items.reduce(function (sum, i) { return sum + i.parsed.y; }, 0);
+                return 'Total: ' + total + ' response' + (total === 1 ? '' : 's');
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            grid: { display: false },
+            ticks: {
+              color: '#5c5955',
+              font: { family: 'JetBrains Mono, monospace', size: 9, weight: '500' },
+              maxRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: 12
+            }
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
+            ticks: {
+              color: '#5c5955',
+              font: { family: 'JetBrains Mono, monospace', size: 9, weight: '500' },
+              precision: 0
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function renderResponsesChart(data) {
+    if (currentType === '' && data.responsesTimeSeriesUser && data.responsesTimeSeriesUser.length > 0) {
+      renderStackedResponsesChart(data.responsesTimeSeriesUser, data.responsesTimeSeriesGuest);
+    } else {
+      responsesChart = renderBarChart(
+        responsesCanvas, responsesChart, data.responsesTimeSeries, 'Response', colors.responses
+      );
+    }
   }
 
   function renderUsersChart(timeSeries) {
@@ -177,7 +276,7 @@
       var data = await fetchStats(days, type);
       populateTiles(data);
       renderQuestionsChart(data.timeSeries);
-      renderResponsesChart(data.responsesTimeSeries);
+      renderResponsesChart(data);
       renderUsersChart(data.usersTimeSeries);
     } catch (err) {
       console.error('Failed to load stats:', err);

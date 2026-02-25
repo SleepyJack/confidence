@@ -104,6 +104,8 @@ module.exports = async function handler(req, res) {
     let avgScoreAll = 0;
     let avgConfidenceAll = 0;
     let responsesTimeSeries = [];
+    let responsesTimeSeriesUser = [];
+    let responsesTimeSeriesGuest = [];
 
     try {
       // Probe: verify response_stats table exists (head queries falsely
@@ -143,9 +145,10 @@ module.exports = async function handler(req, res) {
         }
 
         // Responses time series (date-ranged, filtered by type)
+        // When unfiltered, also fetch player_type to build user/guest breakdown
         let rQuery = supabase
           .from('response_stats')
-          .select('answered_at')
+          .select(playerType ? 'answered_at' : 'answered_at, player_type')
           .order('answered_at', { ascending: true });
         if (playerType) rQuery = rQuery.eq('player_type', playerType);
         if (startDate) rQuery = rQuery.gte('answered_at', startDate.toISOString());
@@ -154,11 +157,24 @@ module.exports = async function handler(req, res) {
 
         if (!rTsErr && rRows) {
           const rCountsByDate = {};
+          const rUserCounts = {};
+          const rGuestCounts = {};
           for (const row of rRows) {
             const day = row.answered_at.slice(0, 10);
             rCountsByDate[day] = (rCountsByDate[day] || 0) + 1;
+            if (!playerType) {
+              if (row.player_type === 'user') {
+                rUserCounts[day] = (rUserCounts[day] || 0) + 1;
+              } else {
+                rGuestCounts[day] = (rGuestCounts[day] || 0) + 1;
+              }
+            }
           }
           responsesTimeSeries = buildTimeSeries(rCountsByDate, startDate, now, rRows, 'answered_at');
+          if (!playerType) {
+            responsesTimeSeriesUser = buildTimeSeries(rUserCounts, startDate, now, rRows, 'answered_at');
+            responsesTimeSeriesGuest = buildTimeSeries(rGuestCounts, startDate, now, rRows, 'answered_at');
+          }
         }
       }
     } catch (e) {
@@ -206,6 +222,8 @@ module.exports = async function handler(req, res) {
       avgScoreAll,
       avgConfidenceAll,
       responsesTimeSeries,
+      responsesTimeSeriesUser,
+      responsesTimeSeriesGuest,
       totalUsers,
       usersTimeSeries
     });
