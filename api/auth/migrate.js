@@ -7,7 +7,6 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
-const { updateQuestionStatsBatch } = require('../_lib/update-question-stats');
 
 // Scoring constants (must match client-side scoring.js)
 const LOG_SCORE_FLOOR = -8;
@@ -115,9 +114,23 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: 'Failed to migrate responses' });
     }
 
-    // Update question stats for all affected questions
-    const questionIds = rows.map(r => r.question_id);
-    await updateQuestionStatsBatch(questionIds, serviceClient);
+    // Insert anonymous stats for each migrated response
+    const statsRows = rows.map(r => ({
+      question_id: r.question_id,
+      player_type: 'user',
+      score: r.score,
+      confidence: r.confidence,
+      answered_at: r.answered_at
+    }));
+
+    const { error: statsError } = await serviceClient
+      .from('response_stats')
+      .insert(statsRows);
+
+    if (statsError) {
+      console.error('Response stats insert error:', statsError);
+      // Non-fatal — the primary migration succeeded
+    }
 
     res.json({ migrated: rows.length });
   } catch (err) {

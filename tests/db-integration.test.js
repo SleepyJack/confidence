@@ -40,12 +40,12 @@ describeIf('db-integration', () => {
     process.env.SUPABASE_SCHEMA = 'test';
 
     // Reset and get fresh client
-    const { resetClient, getClient } = require('../api/lib/supabase');
+    const { resetClient, getClient } = require('../api/_lib/supabase');
     resetClient();
     supabase = getClient();
 
     // Load db-source after schema is set
-    dbSource = require('../api/questions/db-source');
+    dbSource = require('../api/_questions/db-source');
 
     // Clean the test table
     await supabase.from('questions').delete().neq('id', '00000000-0000-0000-0000-000000000000');

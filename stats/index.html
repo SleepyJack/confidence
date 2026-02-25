@@ -92,6 +92,10 @@
       margin-bottom: 20px;
     }
 
+    .summary-row.two-tile {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
     .summary-row.single-tile {
       grid-template-columns: 1fr;
       max-width: 280px;
@@ -222,6 +226,37 @@
       color: var(--accent);
     }
 
+    /* Type filter toggle (Responses section) */
+    .type-buttons {
+      display: flex;
+      gap: 4px;
+    }
+
+    .type-btn {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      transition: all 0.2s var(--ease);
+    }
+
+    .type-btn:hover {
+      border-color: var(--border-strong);
+      color: var(--text-secondary);
+    }
+
+    .type-btn.active {
+      background: var(--section-responses-dim);
+      border-color: rgba(96, 165, 250, 0.3);
+      color: var(--section-responses);
+    }
+
     .stats-chart-wrap {
       position: relative;
       height: 260px;
@@ -282,7 +317,7 @@
     <section class="stats-section stats-section--questions">
       <h2 class="stats-section-heading">Questions</h2>
 
-      <div class="summary-row">
+      <div class="summary-row two-tile">
         <div class="card stat-tile">
           <div class="tile-value loading" id="tile-total">&mdash;</div>
           <div class="tile-label">Total Questions</div>
@@ -290,10 +325,6 @@
         <div class="card stat-tile">
           <div class="tile-value loading" id="tile-active">&mdash;</div>
           <div class="tile-label">Active</div>
-        </div>
-        <div class="card stat-tile">
-          <div class="tile-value loading" id="tile-avg-responses">&mdash;</div>
-          <div class="tile-label">Avg Responses</div>
         </div>
       </div>
 
@@ -316,6 +347,12 @@
     <!-- ── Responses ────────────────────────────────────── -->
     <section class="stats-section stats-section--responses">
       <h2 class="stats-section-heading">Responses</h2>
+
+      <div class="type-buttons" style="margin-bottom: 16px;">
+        <button class="type-btn active" data-type="">All</button>
+        <button class="type-btn" data-type="user">Users</button>
+        <button class="type-btn" data-type="guest">Guests</button>
+      </div>
 
       <div class="summary-row">
         <div class="card stat-tile">

@@ -1,6 +1,10 @@
 /**
  * Stats API — aggregate metrics for the admin dashboard
- * GET /api/stats?days=30
+ * GET /api/stats?days=30&type=user
+ *
+ * Query params:
+ *   days  — 7, 30, 90, or 0/absent for all time (affects time series only)
+ *   type  — 'user', 'guest', or absent for all (filters Responses section)
  */
 
 const { getClient } = require('./_lib/supabase');
@@ -45,6 +49,10 @@ module.exports = async function handler(req, res) {
   const daysParam = parseInt(req.query.days, 10);
   const days = [7, 30, 90].includes(daysParam) ? daysParam : 0;
 
+  // Parse type param (user, guest, or absent = all)
+  const typeParam = req.query.type;
+  const playerType = ['user', 'guest'].includes(typeParam) ? typeParam : null;
+
   try {
     // Use UTC throughout to match Supabase TIMESTAMPTZ values
     const now = new Date();
@@ -70,19 +78,6 @@ module.exports = async function handler(req, res) {
       .eq('status', 'active');
     if (activeErr) throw activeErr;
 
-    // Average responses per question (only questions that have responses)
-    const { data: avgData, error: avgErr } = await supabase
-      .from('questions')
-      .select('response_count')
-      .gt('response_count', 0);
-    if (avgErr) throw avgErr;
-
-    let avgResponsesPerQuestion = 0;
-    if (avgData.length > 0) {
-      const sum = avgData.reduce((acc, row) => acc + row.response_count, 0);
-      avgResponsesPerQuestion = Math.round((sum / avgData.length) * 10) / 10;
-    }
-
     // Questions time series
     let qQuery = supabase
       .from('questions')
@@ -101,54 +96,73 @@ module.exports = async function handler(req, res) {
     }
     const timeSeries = buildTimeSeries(qCountsByDate, startDate, now, qRows, 'created_at');
 
-    // ── Responses ─────────────────────────────────────────────
-    // These tables may not exist in all environments (e.g. test schema),
-    // so errors are caught and defaults returned.
+    // ── Responses (from response_stats) ───────────────────────
+    // Table may not exist in all environments (e.g. test schema
+    // before migration), so the entire block is wrapped in try/catch.
 
     let totalResponses = 0;
     let avgScoreAll = 0;
     let avgConfidenceAll = 0;
     let responsesTimeSeries = [];
 
-    const { count: _respCount, error: respCountErr } = await supabase
-      .from('user_responses')
-      .select('*', { count: 'exact', head: true });
+    try {
+      // Probe: verify response_stats table exists (head queries falsely
+      // return no error for missing tables, so select a real column)
+      let probeQuery = supabase.from('response_stats').select('id').limit(1);
+      const { error: probeErr } = await probeQuery;
+      if (probeErr) throw probeErr;
 
-    if (!respCountErr) {
-      totalResponses = _respCount || 0;
+      // Total count (all-time, filtered by type)
+      let countQuery = supabase
+        .from('response_stats')
+        .select('*', { count: 'exact', head: true });
+      if (playerType) countQuery = countQuery.eq('player_type', playerType);
 
-      const { data: respAggData, error: respAggErr } = await supabase
-        .from('user_responses')
-        .select('score, confidence');
+      const { count: _respCount, error: respCountErr } = await countQuery;
 
-      if (!respAggErr && respAggData && respAggData.length > 0) {
-        const scoreSum = respAggData.reduce((acc, r) => acc + Number(r.score), 0);
-        avgScoreAll = Math.round((scoreSum / respAggData.length) * 10) / 10;
+      if (!respCountErr) {
+        totalResponses = _respCount || 0;
 
-        const confRows = respAggData.filter(r => r.confidence != null);
-        if (confRows.length > 0) {
-          const confSum = confRows.reduce((acc, r) => acc + Number(r.confidence), 0);
-          avgConfidenceAll = Math.round((confSum / confRows.length) * 10) / 10;
+        // Avg score and confidence (all-time, filtered by type)
+        let aggQuery = supabase
+          .from('response_stats')
+          .select('score, confidence');
+        if (playerType) aggQuery = aggQuery.eq('player_type', playerType);
+
+        const { data: respAggData, error: respAggErr } = await aggQuery;
+
+        if (!respAggErr && respAggData && respAggData.length > 0) {
+          const scoreSum = respAggData.reduce((acc, r) => acc + Number(r.score), 0);
+          avgScoreAll = Math.round((scoreSum / respAggData.length) * 10) / 10;
+
+          const confRows = respAggData.filter(r => r.confidence != null);
+          if (confRows.length > 0) {
+            const confSum = confRows.reduce((acc, r) => acc + Number(r.confidence), 0);
+            avgConfidenceAll = Math.round((confSum / confRows.length) * 10) / 10;
+          }
+        }
+
+        // Responses time series (date-ranged, filtered by type)
+        let rQuery = supabase
+          .from('response_stats')
+          .select('answered_at')
+          .order('answered_at', { ascending: true });
+        if (playerType) rQuery = rQuery.eq('player_type', playerType);
+        if (startDate) rQuery = rQuery.gte('answered_at', startDate.toISOString());
+
+        const { data: rRows, error: rTsErr } = await rQuery;
+
+        if (!rTsErr && rRows) {
+          const rCountsByDate = {};
+          for (const row of rRows) {
+            const day = row.answered_at.slice(0, 10);
+            rCountsByDate[day] = (rCountsByDate[day] || 0) + 1;
+          }
+          responsesTimeSeries = buildTimeSeries(rCountsByDate, startDate, now, rRows, 'answered_at');
         }
       }
-
-      let rQuery = supabase
-        .from('user_responses')
-        .select('answered_at')
-        .order('answered_at', { ascending: true });
-      if (startDate) {
-        rQuery = rQuery.gte('answered_at', startDate.toISOString());
-      }
-      const { data: rRows, error: rTsErr } = await rQuery;
-
-      if (!rTsErr && rRows) {
-        const rCountsByDate = {};
-        for (const row of rRows) {
-          const day = row.answered_at.slice(0, 10);
-          rCountsByDate[day] = (rCountsByDate[day] || 0) + 1;
-        }
-        responsesTimeSeries = buildTimeSeries(rCountsByDate, startDate, now, rRows, 'answered_at');
-      }
+    } catch (e) {
+      // response_stats table may not exist yet — use defaults
     }
 
     // ── Users ─────────────────────────────────────────────────
@@ -187,7 +201,6 @@ module.exports = async function handler(req, res) {
     res.status(200).json({
       totalQuestions,
       activeQuestions,
-      avgResponsesPerQuestion,
       timeSeries,
       totalResponses,
       avgScoreAll,

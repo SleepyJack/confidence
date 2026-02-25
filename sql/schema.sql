@@ -29,9 +29,6 @@ CREATE TABLE IF NOT EXISTS questions (
   status            TEXT NOT NULL DEFAULT 'active',
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
   summary           TEXT,
-  response_count    INTEGER NOT NULL DEFAULT 0,
-  avg_response_prec DOUBLE PRECISION,        -- average normalised score (0-100)
-  avg_response_conf DOUBLE PRECISION,        -- average confidence (0-100)
   embedding         vector(768)              -- Gemini text-embedding-004
 );
 
@@ -160,3 +157,20 @@ CREATE POLICY "Users can insert own responses"
   WITH CHECK (auth.uid() = user_id);
 
 -- No update/delete policies — response history is immutable
+
+-- ============================================================
+-- Response stats (anonymous — covers guest, registered, and ex-users)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS response_stats (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  question_id  UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  player_type  TEXT NOT NULL CHECK (player_type IN ('guest', 'user')),
+  score        NUMERIC NOT NULL,
+  confidence   NUMERIC,
+  answered_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_response_stats_question_id ON response_stats(question_id);
+CREATE INDEX IF NOT EXISTS idx_response_stats_player_type ON response_stats(player_type);
+CREATE INDEX IF NOT EXISTS idx_response_stats_answered_at ON response_stats(answered_at DESC);

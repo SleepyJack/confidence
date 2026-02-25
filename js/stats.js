@@ -9,10 +9,13 @@
   var responsesChart = null;
   var usersChart = null;
 
+  // Current filter state
+  var currentDays = 30;
+  var currentType = ''; // '' = all, 'user', 'guest'
+
   // DOM refs — Questions
   var tileTotal = document.getElementById('tile-total');
   var tileActive = document.getElementById('tile-active');
-  var tileAvg = document.getElementById('tile-avg-responses');
   var questionsCanvas = document.getElementById('stats-chart-canvas');
 
   // DOM refs — Responses
@@ -26,6 +29,7 @@
   var usersCanvas = document.getElementById('users-chart-canvas');
 
   var rangeButtons = document.querySelectorAll('.range-btn');
+  var typeButtons = document.querySelectorAll('.type-btn');
 
   // Section colour palettes (match CSS variables)
   var colors = {
@@ -34,8 +38,11 @@
     users:      { main: 'rgba(74, 222, 128, 0.80)', fade: 'rgba(74, 222, 128, 0.18)', border: '#4ade80' }
   };
 
-  async function fetchStats(days) {
-    var qs = days > 0 ? '?days=' + days : '';
+  async function fetchStats(days, type) {
+    var params = [];
+    if (days > 0) params.push('days=' + days);
+    if (type) params.push('type=' + type);
+    var qs = params.length > 0 ? '?' + params.join('&') : '';
     var res = await fetch('/api/stats' + qs);
     if (!res.ok) throw new Error('API returned ' + res.status);
     return res.json();
@@ -48,9 +55,6 @@
 
     tileActive.textContent = data.activeQuestions.toLocaleString();
     tileActive.classList.remove('loading');
-
-    tileAvg.textContent = data.avgResponsesPerQuestion.toFixed(1);
-    tileAvg.classList.remove('loading');
 
     // Responses
     tileTotalResponses.textContent = data.totalResponses.toLocaleString();
@@ -168,9 +172,9 @@
     );
   }
 
-  async function load(days) {
+  async function load(days, type) {
     try {
-      var data = await fetchStats(days);
+      var data = await fetchStats(days, type);
       populateTiles(data);
       renderQuestionsChart(data.timeSeries);
       renderResponsesChart(data.responsesTimeSeries);
@@ -179,7 +183,6 @@
       console.error('Failed to load stats:', err);
       tileTotal.textContent = 'err';
       tileActive.textContent = 'err';
-      tileAvg.textContent = 'err';
       tileTotalResponses.textContent = 'err';
       tileAvgScore.textContent = 'err';
       tileAvgConfidence.textContent = 'err';
@@ -192,7 +195,18 @@
     btn.addEventListener('click', function () {
       rangeButtons.forEach(function (b) { b.classList.remove('active'); });
       btn.classList.add('active');
-      load(parseInt(btn.dataset.days, 10));
+      currentDays = parseInt(btn.dataset.days, 10);
+      load(currentDays, currentType);
+    });
+  });
+
+  // Type button handlers
+  typeButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      typeButtons.forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      currentType = btn.dataset.type;
+      load(currentDays, currentType);
     });
   });
 
@@ -205,6 +219,6 @@
     })
     .catch(function () {});
 
-  // Initial load with 30-day default
-  load(30);
+  // Initial load with 30-day default, all types
+  load(currentDays, currentType);
 })();

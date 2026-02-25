@@ -1,13 +1,16 @@
 /**
- * Respond endpoint — saves a single user response and updates question stats.
+ * Respond endpoint — saves a single user response.
  *
  * POST /api/auth/respond
  * Auth: Bearer token (Supabase JWT)
  * Body: { questionId, userLow, userHigh, confidence, correctAnswer, isCorrect, score }
+ *
+ * Writes to both:
+ *   - user_responses (identity-linked history)
+ *   - response_stats (anonymous aggregate, player_type='user')
  */
 
 const { getClient } = require('../_lib/supabase');
-const { updateQuestionStats } = require('../_lib/update-question-stats');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -35,7 +38,7 @@ module.exports = async (req, res) => {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
-    // Insert the response
+    // Insert identity-linked response
     const { error: insertError } = await supabase
       .from('user_responses')
       .insert({
@@ -55,9 +58,20 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: 'Failed to save response' });
     }
 
-    // Update question aggregate stats (fire-and-forget is fine here,
-    // but we await to keep it simple and ensure consistency)
-    await updateQuestionStats(questionId, supabase);
+    // Insert anonymous stat record
+    const { error: statsError } = await supabase
+      .from('response_stats')
+      .insert({
+        question_id: questionId,
+        player_type: 'user',
+        score: score,
+        confidence: confidence
+      });
+
+    if (statsError) {
+      console.error('Response stats insert error:', statsError);
+      // Non-fatal — the primary response was saved
+    }
 
     res.json({ ok: true });
   } catch (err) {
