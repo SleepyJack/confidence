@@ -75,9 +75,29 @@ const Game = {
     Storage.markQuestionSeen(this.currentQuestion.id);
     this.seenQuestions.push(this.currentQuestion.id);
 
-    // Also save to Supabase if logged in (fire-and-forget)
+    // Save to server (fire-and-forget)
     if (Auth.isLoggedIn()) {
-      Auth.saveResponse(answerData).catch(() => {});
+      Auth.saveResponse(answerData).catch(function () {});
+    } else {
+      // Guest: save anonymous stats
+      var score = Scoring.normalizeLogScore(
+        Math.max(
+          Scoring.calculateLogScore(
+            answerData.userLow, answerData.userHigh,
+            answerData.confidence, answerData.correctAnswer
+          ),
+          Scoring.LOG_SCORE_FLOOR
+        )
+      );
+      fetch('/api/respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId: answerData.questionId,
+          score: score,
+          confidence: answerData.confidence
+        })
+      }).catch(function () {});
     }
 
     return answerData;
