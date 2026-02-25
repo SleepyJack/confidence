@@ -271,7 +271,16 @@
     );
   }
 
+  function clearDisplay() {
+    var tiles = [tileTotal, tileActive, tileTotalResponses, tileAvgScore, tileAvgConfidence, tileTotalUsers];
+    tiles.forEach(function (t) { t.textContent = '\u2014'; t.classList.add('loading'); });
+    if (questionsChart) { questionsChart.destroy(); questionsChart = null; }
+    if (responsesChart) { responsesChart.destroy(); responsesChart = null; }
+    if (usersChart) { usersChart.destroy(); usersChart = null; }
+  }
+
   async function load(days, type) {
+    clearDisplay();
     try {
       var data = await fetchStats(days, type);
       populateTiles(data);
