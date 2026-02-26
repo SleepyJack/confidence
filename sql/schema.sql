@@ -174,3 +174,5 @@ CREATE TABLE IF NOT EXISTS response_stats (
 CREATE INDEX IF NOT EXISTS idx_response_stats_question_id ON response_stats(question_id);
 CREATE INDEX IF NOT EXISTS idx_response_stats_player_type ON response_stats(player_type);
 CREATE INDEX IF NOT EXISTS idx_response_stats_answered_at ON response_stats(answered_at DESC);
+
+ALTER TABLE response_stats ENABLE ROW LEVEL SECURITY;
