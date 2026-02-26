@@ -6,6 +6,17 @@
     "model": "gemini-2.5-flash"
   },
   "auth": {
-    "emailConfirmation": true
-  }
+    "emailConfirmation": true,
+    "minPasswordLength": 8
+  },
+  "rateLimits": {
+    "guestRespond":  { "windowMs": 60000,    "max": 30 },
+    "authRespond":   { "windowMs": 60000,    "max": 30 },
+    "register":      { "windowMs": 3600000,  "max": 10 },
+    "signup":        { "windowMs": 3600000,  "max": 10 },
+    "migrate":       { "windowMs": 3600000,  "max": 10 },
+    "delete":        { "windowMs": 3600000,  "max": 10 }
+  },
+  "maxBodyBytes": 65536,
+  "maxBodyBytesMigrate": 524288
 }

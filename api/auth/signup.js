@@ -11,6 +11,7 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
+const { createRateLimiter, checkBodySize } = require('../_lib/rate-limit');
 
 function getServiceClient() {
   const url = process.env.SUPABASE_URL;
@@ -27,10 +28,14 @@ function getUserClient(url, anonKey, accessToken) {
   });
 }
 
+const signupLimiter = createRateLimiter('signup');
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  if (signupLimiter.check(req, res)) return;
+  if (checkBodySize(req, res)) return;
 
   // Extract JWT from Authorization header
   const authHeader = req.headers.authorization;

@@ -11,11 +11,16 @@
  */
 
 const { getClient } = require('../_lib/supabase');
+const { createRateLimiter, checkBodySize } = require('../_lib/rate-limit');
+
+const limiter = createRateLimiter('authRespond');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  if (limiter.check(req, res)) return;
+  if (checkBodySize(req, res)) return;
 
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -27,6 +32,13 @@ module.exports = async (req, res) => {
 
   if (!questionId || userLow == null || userHigh == null || correctAnswer == null || score == null) {
     return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  if (!Number.isFinite(score) || score < 0 || score > 100) {
+    return res.status(400).json({ error: 'Score must be between 0 and 100' });
+  }
+  if (confidence != null && (!Number.isFinite(confidence) || confidence < 50 || confidence > 99)) {
+    return res.status(400).json({ error: 'Confidence must be between 50 and 99' });
   }
 
   try {

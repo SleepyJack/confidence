@@ -9,6 +9,7 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
+const { createRateLimiter } = require('../_lib/rate-limit');
 
 function getServiceClient() {
   const url = process.env.SUPABASE_URL;
@@ -19,10 +20,13 @@ function getServiceClient() {
   return createClient(url, key);
 }
 
+const deleteLimiter = createRateLimiter('delete');
+
 module.exports = async (req, res) => {
   if (req.method !== 'DELETE') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  if (deleteLimiter.check(req, res)) return;
 
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

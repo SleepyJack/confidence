@@ -13,6 +13,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
+const { createRateLimiter, checkBodySize } = require('../_lib/rate-limit');
 
 // Load config.json
 let appConfig = {};
@@ -34,10 +35,14 @@ function getServiceClient() {
   });
 }
 
+const registerLimiter = createRateLimiter('register');
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  if (registerLimiter.check(req, res)) return;
+  if (checkBodySize(req, res)) return;
 
   const { email, password, handle } = req.body || {};
 
@@ -48,8 +53,9 @@ module.exports = async (req, res) => {
   if (!password || typeof password !== 'string') {
     return res.status(400).json({ error: 'Password is required' });
   }
-  if (password.length < 6) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  const minPw = appConfig.auth?.minPasswordLength || 8;
+  if (password.length < minPw) {
+    return res.status(400).json({ error: 'Password must be at least ' + minPw + ' characters' });
   }
   if (!handle || typeof handle !== 'string') {
     return res.status(400).json({ error: 'Handle is required' });

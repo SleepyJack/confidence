@@ -754,8 +754,8 @@ const AuthUI = {
       return;
     }
 
-    if (password.length < 6) {
-      AuthUI.showError('signup-form', 'Password must be at least 6 characters');
+    if (password.length < 8) {
+      AuthUI.showError('signup-form', 'Password must be at least 8 characters');
       return;
     }
 
@@ -919,8 +919,8 @@ const AuthUI = {
     const password = form.querySelector('[name="password"]').value;
     const submitBtn = form.querySelector('button[type="submit"]');
 
-    if (!password || password.length < 6) {
-      this.showError('set-password-form', 'Password must be at least 6 characters');
+    if (!password || password.length < 8) {
+      this.showError('set-password-form', 'Password must be at least 8 characters');
       return;
     }
 

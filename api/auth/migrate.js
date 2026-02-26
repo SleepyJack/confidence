@@ -7,6 +7,12 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const path = require('path');
+const { createRateLimiter, checkBodySize } = require('../_lib/rate-limit');
+
+let config = {};
+try { config = JSON.parse(fs.readFileSync(path.join(__dirname, '../../config.json'), 'utf8')); } catch (e) {}
 
 // Scoring constants (must match client-side scoring.js)
 const LOG_SCORE_FLOOR = -8;
@@ -56,10 +62,14 @@ function calculateScore(userLow, userHigh, confidence, correctAnswer) {
   return ((logScore - LOG_SCORE_FLOOR) / (0 - LOG_SCORE_FLOOR)) * 100;
 }
 
+const migrateLimiter = createRateLimiter('migrate');
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  if (migrateLimiter.check(req, res)) return;
+  if (checkBodySize(req, res, config.maxBodyBytesMigrate || 524288)) return;
 
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
