@@ -1,6 +1,6 @@
 # Supabase Database Setup
 
-All database objects are defined in a single file: `sql/schema.sql`. It creates the `questions`, `user_profiles`, and `user_responses` tables along with extensions, indexes, RPC functions, and Row Level Security policies.
+All database objects are defined in a single file: `sql/schema.sql`. It creates the `questions`, `user_profiles`, `user_responses`, and `response_stats` tables along with extensions, indexes, RPC functions, and Row Level Security policies.
 
 ## Environment Variables
 

@@ -2,6 +2,8 @@
 
 A web-based game to improve your confidence calibration by making numerical estimates with confidence intervals.
 
+Try it at [www.calibrategame.com](www.calibrategame.com)
+
 ## What is Confidence Calibration?
 
 Confidence calibration measures how well your stated confidence matches reality. If you say you're 80% confident about 10 estimates, you should be correct about 8 of them. This game helps you discover if you're overconfident (correct less often than you claim) or underconfident (correct more often than you claim).
@@ -54,12 +56,3 @@ Setup guides:
 
 See [PLAN.md](PLAN.md) for outstanding work and expansion ideas.
 
-## Why This Matters
-
-Good calibration is a critical skill for:
-- Decision-making under uncertainty
-- Risk assessment
-- Forecasting and prediction
-- Understanding the limits of your knowledge
-
-By practicing with this game, you can become more aware of your cognitive biases and improve your judgment over time.
