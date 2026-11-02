@@ -2,7 +2,7 @@
 
 A web-based game to improve your confidence calibration by making numerical estimates with confidence intervals.
 
-Try it at [www.calibrategame.com](www.calibrategame.com)
+Try it at [www.calibrategame.com](https://www.calibrategame.com)
 
 ## What is Confidence Calibration?
 
